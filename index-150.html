@@ -1,0 +1,4123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5, user-scalable=yes">
+<title>The Joey</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --fairway:#006747;
+    --fairway-2:#006747;
+    --fairway-light:#3C6B54;
+    --gold:#FFD166;
+    --gold-light:#FFE29A;
+    --parchment:#EFE8D6;
+    --paper:#F5F3EC;
+    --ink:#1A2620;
+    --ink-soft:#59685F;
+    --line:#D6D9CE;
+    --flag:#C41E3A;
+    --water:#4C7FA6;
+    --water-light:#DCE9F0;
+    --sand:#D9C48C;
+    --board:#006747;
+    --board-line:rgba(245,243,236,0.10);
+    --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--parchment);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    -webkit-font-smoothing:antialiased;
+    padding-bottom:78px;
+    min-height:100vh;
+  }
+  ::selection{background:var(--gold-light);}
+  h1,h2,h3,.display{
+    font-family:'Bebas Neue',sans-serif;
+    font-weight:400;
+    letter-spacing:.02em;
+    text-transform:uppercase;
+    line-height:0.95;
+    color:var(--fairway);
+    margin:0;
+  }
+  .mono{font-family:'JetBrains Mono',monospace;}
+  a{color:inherit;}
+  button{font-family:inherit;cursor:pointer;}
+  input,textarea,select{font-family:inherit;}
+
+  /* ribbon */
+  .ribbon{
+    background:var(--fairway);
+    color:var(--parchment);
+    text-align:center;
+    padding:7px 12px;
+    font-size:12.5px;
+    letter-spacing:.02em;
+  }
+  .ribbon b{color:var(--gold-light);font-weight:600;}
+
+  .scorecard-header{
+    background:linear-gradient(90deg,var(--fairway) 0%,var(--fairway-light) 100%);
+    padding:14px 16px;text-align:center;
+  }
+  .scorecard-header-title{
+    font-family:'Baskerville','Baskerville Old Face',Georgia,'Times New Roman',serif;
+    font-style:italic;font-weight:700;
+    font-size:26px;color:var(--paper);letter-spacing:.02em;
+  }
+  .scorecard-header-year{
+    display:block;font-family:'JetBrains Mono',monospace;font-style:normal;
+    font-size:12px;color:var(--gold-light);letter-spacing:.06em;margin-top:2px;
+  }
+
+  header.hero{
+    background:linear-gradient(180deg,var(--fairway) 0%, var(--fairway-2) 100%);
+    color:var(--paper);
+    padding:10px 20px 26px;
+    position:relative;
+    overflow:hidden;
+  }
+  header.hero::after{
+    content:"";
+    position:absolute;
+    right:-40px;top:-40px;
+    width:180px;height:180px;
+    border-radius:50%;
+    background:radial-gradient(circle, rgba(216,182,109,0.18), transparent 70%);
+  }
+  .hero-rule{
+    width:64px;height:3px;margin-top:10px;
+    background:linear-gradient(90deg,var(--gold),var(--gold-light),var(--gold));
+    border-radius:2px;
+  }
+  .hero-title{
+    font-size:44px;
+    line-height:0.9;
+    letter-spacing:.03em;
+  }
+  .hero-tagline{
+    font-style:italic;
+    font-size:12.5px;
+    color:var(--gold-light);
+    margin-top:8px;
+    letter-spacing:.02em;
+  }
+  .hero-sub{
+    margin-top:6px;
+    font-size:14px;
+    color:#CFE0D2;
+    max-width:56ch;
+  }
+  .hero-date{
+    margin-top:16px;
+    display:inline-flex;
+    gap:8px;
+    align-items:baseline;
+    font-family:'JetBrains Mono',monospace;
+    font-size:12px;
+    color:var(--gold-light);
+    border:1px solid rgba(216,182,109,.4);
+    padding:5px 10px;
+    border-radius:20px;
+  }
+
+  main{padding:16px 16px 8px; max-width:560px; margin:0 auto;}
+  .card{
+    background:var(--paper);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:16px;
+    margin-bottom:14px;
+  }
+  .section-title{
+    font-size:20px;
+    margin-bottom:4px;
+  }
+  .section-desc{
+    font-size:13px;
+    color:var(--ink-soft);
+    margin-bottom:14px;
+  }
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:6px;
+    background:var(--fairway);
+    color:var(--paper);
+    border:none;
+    padding:10px 16px;
+    border-radius:9px;
+    font-size:14px;
+    font-weight:600;
+  }
+  .btn:active{transform:translateY(1px);}
+  .btn.secondary{
+    background:transparent;
+    color:var(--fairway);
+    border:1.5px solid var(--fairway);
+  }
+  .btn.gold{background:var(--gold);color:#2A1E08;}
+  .btn.small{padding:7px 11px;font-size:12.5px;border-radius:7px;}
+  .btn.block{width:100%;}
+  input[type=text],input[type=number],textarea,select{
+    width:100%;
+    border:1.5px solid var(--line);
+    background:#fff;
+    border-radius:8px;
+    padding:9px 11px;
+    font-size:14px;
+    color:var(--ink);
+  }
+  textarea{resize:vertical;min-height:64px;}
+  input:focus,textarea:focus,select:focus{outline:2px solid var(--fairway-light);outline-offset:1px;}
+  label.field-label{
+    display:block;font-size:12px;color:var(--ink-soft);
+    margin-bottom:4px;font-weight:600;
+  }
+  .field{margin-bottom:12px;}
+
+  /* nav */
+  nav.tabbar{
+    position:fixed;bottom:0;left:0;right:0;
+    background:var(--fairway);
+    display:flex;
+    border-top:1px solid rgba(255,255,255,.08);
+    z-index:50;
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+  nav.tabbar button{
+    flex:1;
+    background:none;border:none;
+    color:#9FB6A4;
+    padding:9px 2px 8px;
+    font-size:10.5px;
+    display:flex;flex-direction:column;align-items:center;gap:3px;
+    font-weight:600;
+    letter-spacing:.01em;
+  }
+  nav.tabbar button.active{color:var(--gold-light);}
+  nav.tabbar svg{width:20px;height:20px;}
+
+  /* leaderboard — full arched wooden scoreboard scene */
+  .lb-scene{
+    position:relative;
+    margin:-16px -16px 14px;
+    padding:26px 16px 96px;
+    overflow:hidden;
+    background-image:linear-gradient(rgba(0,0,0,0.06),rgba(0,0,0,0.06)), url('https://res.cloudinary.com/kp3eoza3/image/upload/v1788984470/Screenshot_20260909_160241_Chrome.jpg');
+    background-size:cover;
+    background-position:center 26%;
+    background-repeat:no-repeat;
+  }
+  .sign-frame{
+    position:relative;
+    width:100%;
+    max-width:680px;
+    margin:0 auto;
+    padding:0 12px;
+  }
+  .board{
+    position:relative;
+    background:var(--paper);
+    border:3px solid var(--ink);
+    border-radius:50% 50% 0 0 / 40px 40px 0 0;
+    padding:20px 8px 0;
+    box-shadow:
+      0 14px 28px rgba(0,0,0,0.35),
+      inset 0 3px 0 rgba(255,255,255,0.55),
+      inset 0 10px 14px -10px rgba(0,0,0,0.28);
+  }
+  .sign-post{
+    position:absolute;
+    top:14px;
+    bottom:-3px;
+    width:16px;
+    background:linear-gradient(90deg, #B7AF95 0%, #FBFAF4 32%, #FFFFFF 48%, #FBFAF4 62%, #B7AF95 100%);
+    border:1.5px solid var(--ink);
+    border-radius:8px 8px 0 0;
+    box-shadow:2px 0 4px rgba(0,0,0,0.15), inset 0 2px 3px rgba(255,255,255,0.7);
+  }
+  .sign-post.left{left:-10px;}
+  .sign-post.right{right:-10px;}
+  .sign-cap{
+    position:absolute;
+    top:-9px;
+    width:22px;height:22px;
+    border-radius:50%;
+    left:50%;
+    transform:translateX(-50%);
+    background:radial-gradient(circle at 32% 28%, #FFFFFF 0%, #FBFAF4 25%, #DAD5C2 60%, #B7AF95 100%);
+    border:1.5px solid var(--ink);
+    box-shadow:inset -3px -3px 4px rgba(0,0,0,0.22), inset 2px 2px 3px rgba(255,255,255,0.8), 0 3px 3px rgba(0,0,0,0.25);
+  }
+  .sign-cap::after{
+    content:"";
+    position:absolute;
+    bottom:-3px;left:50%;
+    width:16px;height:5px;
+    transform:translateX(-50%);
+    background:radial-gradient(ellipse at center, rgba(0,0,0,0.22) 0%, rgba(0,0,0,0) 75%);
+  }
+  .sign-beam{
+    position:absolute;
+    left:-18px;right:-18px;
+    top:calc(100% - 3px);
+    height:53px;
+    background:linear-gradient(180deg, var(--fairway-light) 0%, var(--fairway-2) 45%, var(--fairway) 60%, #0E1F16 100%);
+    box-shadow:0 6px 10px rgba(0,0,0,0.3);
+  }
+  .sign-beam-gold-strip{
+    position:absolute;
+    left:0;right:0;bottom:0;
+    height:2.5px;
+    background:linear-gradient(90deg, var(--gold) 0%, var(--gold-light) 50%, var(--gold) 100%);
+    box-shadow:0 -1px 2px rgba(0,0,0,0.2);
+  }
+  .sign-pole{
+    position:absolute;
+    left:50%;
+    top:calc(100% + 50px);
+    width:34px;height:70px;
+    transform:translateX(-50%);
+    background:linear-gradient(90deg, #0E1F16 0%, var(--fairway-2) 20%, var(--fairway-light) 45%, var(--fairway-2) 65%, #0E1F16 100%);
+  }
+  .sign-ground-shadow{
+    position:absolute;
+    left:50%;
+    top:calc(100% + 115px);
+    width:60%;height:14px;
+    transform:translateX(-50%);
+    background:radial-gradient(ellipse at center, rgba(0,0,0,0.30) 0%, transparent 72%);
+  }
+  .board-title{
+    text-align:center;
+    font-family:'Baskerville','Baskerville Old Face',Georgia,'Times New Roman',serif;
+    font-style:italic;
+    font-weight:700;
+    font-size:26px;
+    letter-spacing:.03em;
+    color:var(--ink);
+    margin:0 0 2px;
+    line-height:1.05;
+  }
+  .board-title .board-title-year{
+    display:block;
+    font-size:13px;
+    letter-spacing:.06em;
+    margin-top:3px;
+    font-weight:600;
+  }
+  .board-head{
+    display:flex;align-items:center;gap:4px;
+    padding:6px 6px 6px 3px;
+    background:var(--fairway);
+    border:1px solid var(--fairway);
+    border-bottom:2px solid var(--ink);
+  }
+  .board-head span{
+    font-size:11.5px;font-weight:800;letter-spacing:.02em;
+    color:var(--paper);text-transform:uppercase;
+    text-align:center;
+  }
+  .board-head .bh-pos{width:18px;flex-shrink:0;}
+  .board-head .bh-team{flex:1;text-align:left;padding-left:6px;}
+  .board-head .bh-thru{width:38px;flex-shrink:0;}
+  .board-head .bh-score{width:50px;flex-shrink:0;}
+  .lb-row{
+    display:flex;align-items:center;gap:4px;
+    padding:10px 6px 10px 3px;
+    border:1px solid var(--line);
+    border-top:none;
+  }
+  .lb-row:nth-child(3n+1){border-bottom:3px solid var(--ink);}
+  .lb-row:last-child{border-bottom:3px solid var(--ink);}
+  .lb-row{background:var(--paper);}
+  .lb-pos{
+    font-size:14px;font-weight:800;color:var(--ink);
+    width:18px;text-align:center;flex-shrink:0;
+  }
+  .lb-name{flex:1;font-size:15px;font-weight:800;color:var(--ink);min-width:0;padding-left:2px;font-family:'Benton Sans','Helvetica Neue',Arial,sans-serif;text-transform:uppercase;letter-spacing:.01em;line-height:1.35;}
+  .lb-thru{width:38px;text-align:center;flex-shrink:0;}
+  .lb-score{width:50px;text-align:center;flex-shrink:0;}
+  .bh-expand{width:22px;flex-shrink:0;}
+  .lb-expand-toggle{
+    width:20px;height:20px;flex-shrink:0;
+    border-radius:50%;border:1px solid var(--line);
+    background:#fff;color:var(--ink-soft);
+    font-size:12px;font-weight:600;line-height:1;
+    display:flex;align-items:center;justify-content:center;
+    padding:0;opacity:.7;
+  }
+  .lb-expand-strip{
+    background:var(--parchment);
+    border:1px solid var(--line);border-top:none;
+  }
+  .score-box{
+    margin:0 auto;
+    width:29px;height:35px;
+    line-height:35px;
+    padding:0;
+    font-family:'Benton Sans','Helvetica Neue',Arial,sans-serif;
+    font-weight:800;font-size:14px;
+    background:
+      radial-gradient(circle at 50% 30%, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0) 60%),
+      linear-gradient(180deg, #FDFCF6 0%, #EDE9D9 100%);
+    border:1px solid var(--line);
+    border-radius:4px;
+    box-shadow:inset 0 1px 2px rgba(255,255,255,0.9), inset 0 -2px 3px rgba(0,0,0,0.10);
+    color:var(--ink);
+  }
+  .score-box.under{color:var(--flag);}
+  .score-box.even{color:var(--fairway-2);}
+  .lb-medal{font-size:14px;}
+  .board-team-badge{
+    width:20px;height:20px;border-radius:50%;
+    background:var(--gold);color:#2A1E08;
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Bebas Neue',sans-serif;font-weight:700;font-size:10.5px;flex-shrink:0;
+  }
+
+  /* scorecard grid */
+  .player-select{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;margin-bottom:14px;}
+  .player-chip{
+    flex:0 0 auto;
+    padding:7px 13px;border-radius:20px;
+    border:1.5px solid var(--line);
+    background:#fff;font-size:13px;font-weight:600;color:var(--ink-soft);
+    white-space:nowrap;
+  }
+  .player-chip.active{background:var(--fairway);color:var(--paper);border-color:var(--fairway);}
+
+  .mode-switch{display:flex;gap:6px;margin-bottom:14px;background:#EFE9D8;border-radius:10px;padding:4px;}
+  .mode-switch button{flex:1;background:none;border:none;padding:8px;border-radius:7px;font-size:12.5px;font-weight:700;color:var(--ink-soft);}
+  .mode-switch button.active{background:var(--fairway);color:var(--paper);}
+
+  .group-filter{display:flex;gap:7px;overflow-x:auto;padding-bottom:4px;margin-bottom:10px;}
+  .group-chip{
+    flex:0 0 auto;padding:6px 12px;border-radius:16px;
+    border:1.5px solid var(--line);background:#fff;
+    font-size:12px;font-weight:600;color:var(--ink-soft);white-space:nowrap;
+  }
+  .group-chip.active{background:var(--gold);color:#2A1E08;border-color:var(--gold);}
+
+  .team-chip{
+    flex:0 0 auto;padding:7px 13px 7px 8px;border-radius:20px;
+    border:1.5px solid var(--line);background:#fff;
+    display:flex;align-items:center;gap:7px;white-space:nowrap;
+  }
+  .team-chip.active{background:var(--fairway);border-color:var(--fairway);}
+  .team-chip.active .team-badge{background:var(--gold);color:#2A1E08;}
+  .team-chip.active .team-chip-name{color:var(--paper);}
+  .team-badge{
+    width:22px;height:22px;border-radius:50%;
+    background:var(--fairway);color:#fff;
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Bebas Neue',sans-serif;font-weight:700;font-size:12px;flex-shrink:0;
+  }
+  .team-chip-name{font-size:12.5px;font-weight:600;color:var(--ink-soft);}
+
+  .group-block{border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:12px;background:#fff;}
+  .group-block-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;}
+  .group-block-title{font-family:'Bebas Neue',sans-serif;font-weight:600;font-size:15px;color:var(--fairway);}
+  .group-block-time{font-size:11.5px;color:var(--ink-soft);font-family:'JetBrains Mono',monospace;}
+  .team-row{
+    display:flex;align-items:center;gap:10px;
+    padding:8px 0;border-top:1px solid var(--line);
+  }
+  .team-row:first-of-type{border-top:none;}
+  .team-row-info{flex:1;}
+  .team-row-players{font-size:11.5px;color:var(--ink-soft);}
+  .team-row-actions{display:flex;gap:10px;}
+  .nine-label{
+    font-size:11px;text-transform:uppercase;letter-spacing:.08em;
+    color:var(--ink-soft);font-weight:700;margin:14px 0 6px;
+  }
+  .score-grid{display:grid;grid-template-columns:repeat(9,1fr);gap:5px;}
+  .score-cell{text-align:center;}
+  .hole-num{font-size:10px;color:var(--ink-soft);margin-bottom:3px;font-weight:600;}
+  .hole-par{font-size:9px;color:var(--gold);margin-bottom:3px;font-weight:700;}
+  .score-input-wrap{position:relative;width:100%;aspect-ratio:1;}
+  input.score-input{
+    width:100%;height:100%;
+    text-align:center;
+    border-radius:8px;
+    font-family:'JetBrains Mono',monospace;
+    font-weight:600;font-size:14px;
+    padding:0;
+    border:1.5px solid var(--line);
+    background:#fff;
+    color:var(--ink);
+  }
+  .score-input.birdie{border-radius:50%;border-color:var(--flag);color:var(--flag);}
+  .score-input.eagle{border-radius:50%;border-color:var(--flag);color:var(--flag);box-shadow:0 0 0 2.5px #fff inset, 0 0 0 4px var(--flag) inset;}
+  .score-input.bogey{border-radius:4px;border-color:var(--water);color:var(--water);}
+  .score-input.dbogey{border-radius:4px;border-color:var(--water);color:var(--water);box-shadow:0 0 0 2.5px #fff inset,0 0 0 4px var(--water) inset;}
+  .score-input-readonly{
+    width:100%;height:100%;display:flex;align-items:center;justify-content:center;
+    border-radius:8px;font-family:'JetBrains Mono',monospace;font-weight:600;font-size:14px;
+    border:1.5px solid var(--line);background:var(--parchment);color:var(--ink-soft);
+  }
+  .score-input-readonly.birdie{border-radius:50%;border-color:var(--flag);color:var(--flag);background:#fff;}
+  .score-input-readonly.eagle{border-radius:50%;border-color:var(--flag);color:var(--flag);background:#fff;box-shadow:0 0 0 2.5px #fff inset, 0 0 0 4px var(--flag) inset;}
+  .score-input-readonly.bogey{border-radius:4px;border-color:var(--water);color:var(--water);background:#fff;}
+  .score-input-readonly.dbogey{border-radius:4px;border-color:var(--water);color:var(--water);background:#fff;box-shadow:0 0 0 2.5px #fff inset,0 0 0 4px var(--water) inset;}
+  .score-legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:14px;font-size:11px;color:var(--ink-soft);}
+  .score-legend span{display:inline-flex;align-items:center;gap:5px;}
+  .legend-swatch{width:13px;height:13px;border:1.5px solid currentColor;display:inline-block;}
+  .legend-swatch.circle{border-radius:50%;}
+
+  /* printed-scorecard-style grid used in Score Entry */
+  .pcard-wrap{margin-bottom:14px;border:1px solid var(--line);border-radius:8px;overflow:hidden;}
+  .pcard-nine-label{
+    font-size:13px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;
+    color:var(--paper);background:var(--board);padding:5px 8px;
+  }
+  .pcard-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  table.pcard-table{width:560px;border-collapse:collapse;table-layout:fixed;}
+  .pcard-table th,.pcard-table td{border:1px solid var(--line);text-align:center;padding:0;}
+  .pcard-label-col{width:58px;}
+  .pcard-hole-col{width:48px;}
+  .pcard-out-col{width:58px;}
+  .pcard-label{
+    text-align:left !important;padding-left:5px !important;
+    font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.02em;
+    position:sticky;left:0;z-index:2;
+  }
+  .pcard-label::after{
+    content:"";position:absolute;top:0;right:0;bottom:0;width:1px;
+    background:var(--ink-soft);
+    box-shadow:2px 0 4px rgba(0,0,0,0.08);
+  }
+  tr.pcard-hole th{background:var(--fairway);color:var(--paper);font-size:15px;font-weight:700;padding:7px 2px;}
+  tr.pcard-hole th.pcard-label{color:var(--gold-light);}
+  tr.pcard-yards td{background:var(--paper);color:var(--ink);font-size:15px;font-weight:700;padding:7px 2px;}
+  tr.pcard-hcp td{background:#E3F0E6;color:var(--ink);font-size:15px;font-weight:700;padding:7px 2px;}
+  tr.pcard-par td{background:#E3F0E6;color:var(--ink);font-size:15px;font-weight:700;padding:7px 2px;}
+  .pcard-table .current-hole-col{background:#CED6C2;}
+  .pcard-hole th.current-hole-col{color:var(--fairway);font-weight:800;}
+  .contest-asterisk{color:var(--gold-light);font-weight:800;margin-left:1px;}
+  tr.pcard-score td{background:#fff;padding:8px 3px;}
+  tr.pcard-score td.pcard-label{font-size:10.5px;color:var(--ink-soft);font-weight:700;}
+  .pcard-sum{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:15px;color:var(--ink);}
+  .pcard-team-badge{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:26px;height:26px;border-radius:50%;
+    background:var(--gold-light);color:#1B2A4A;
+    font-size:13px;font-weight:800;text-transform:uppercase;
+  }
+
+  .your-team-card{
+    background:linear-gradient(90deg,#1B2A4A 0%,#2E4470 100%);
+    border-radius:12px;padding:14px 16px;margin-bottom:12px;
+    display:flex;align-items:center;gap:12px;color:var(--paper);
+  }
+  .contest-card-header{
+    background:linear-gradient(90deg,#1B2A4A 0%,#2E4470 100%);
+    color:#fff;font-weight:800;font-size:17px;
+    padding:14px 16px;
+  }
+  .your-team-badge-wrap{flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:3px;}
+  .your-team-badge-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;opacity:.7;}
+  .your-team-badge{
+    width:40px;height:40px;border-radius:50%;
+    background:var(--gold-light);color:#1B2A4A;
+    display:flex;align-items:center;justify-content:center;
+    font-size:17px;font-weight:800;
+  }
+  .your-team-info{flex:1;min-width:0;}
+  .your-team-info div{font-size:19px;font-weight:800;line-height:1.3;}
+  .your-team-stats{flex-shrink:0;text-align:right;}
+  .your-team-score{font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:800;line-height:1;}
+  .your-team-thru{font-size:13px;font-weight:600;opacity:.85;margin-top:4px;white-space:nowrap;}
+
+  .current-hole-card{
+    position:relative;overflow:hidden;
+    border:1px solid var(--line);border-radius:12px;
+    padding:18px 16px;margin-bottom:12px;
+  }
+  .current-hole-card::before{
+    content:"";position:absolute;inset:-10px;z-index:0;
+    background-image:url('https://res.cloudinary.com/kp3eoza3/image/upload/v1788981007/Screenshot_20260909_081750_Chrome.jpg');
+    background-size:cover;background-position:center;
+    filter:blur(1px);
+  }
+  .current-hole-card::after{
+    content:"";position:absolute;inset:0;z-index:1;
+    background:linear-gradient(180deg, rgba(74,149,204,0.39) 0%, rgba(46,125,74,0.41) 100%);
+  }
+  .current-hole-card-top{position:relative;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:10px;}
+  .current-hole-title{font-family:'Bebas Neue',sans-serif;font-size:26px;color:#fff;letter-spacing:.02em;line-height:1;}
+  .current-hole-par-row{font-family:'Bebas Neue',sans-serif;font-size:22px;color:#fff;letter-spacing:.02em;margin-top:2px;}
+  .current-hole-meta{font-family:'Bebas Neue',sans-serif;font-size:19px;color:#fff;letter-spacing:.02em;margin-top:5px;}
+  .hole-preview-cta{
+    flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:2px;
+    background:var(--fairway);border:1px solid rgba(255,255,255,0.65);border-radius:12px;
+    padding:8px 10px;color:#fff;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;
+  }
+  .hole-preview-cta-icon{font-size:20px;}
+  .current-hole-contest{
+    position:relative;z-index:2;
+    display:flex;align-items:center;gap:8px;
+    color:#fff;font-size:13px;font-weight:700;text-align:left;
+    margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.25);
+  }
+  .current-hole-contest-icon{font-size:20px;line-height:1;flex-shrink:0;}
+
+  .quick-score-row{display:flex;gap:6px;margin-top:8px;}
+  .quick-score-col{display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;min-width:0;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;}
+  .quick-score-btn{
+    width:100%;height:43px;
+    display:flex;align-items:center;justify-content:center;
+    border-radius:12px;border:1.5px solid var(--line);background:#fff;color:var(--ink);
+    box-shadow:0 1px 2px rgba(0,0,0,.06),0 2px 6px rgba(0,0,0,.05);
+    transition:transform .08s ease,box-shadow .08s ease,background .12s ease,border-color .12s ease;
+  }
+  .quick-score-col:active .quick-score-btn{transform:scale(0.96);box-shadow:0 1px 2px rgba(0,0,0,.08) inset;}
+  .quick-score-num{font-family:'JetBrains Mono',monospace;font-size:18.75px;font-weight:800;color:var(--ink);line-height:1;}
+  .quick-score-label{font-size:13px;font-weight:600;color:var(--ink-soft);line-height:1.1;text-align:center;}
+  .quick-score-label.is-compact{font-size:10.5px;margin-top:2px;}
+  .quick-score-btn.is-par{border-color:rgba(0,103,71,0.4);background:#F3FAF6;}
+  .quick-score-btn.selected{background:var(--fairway);border-color:var(--fairway);box-shadow:0 2px 8px rgba(0,103,71,.35);}
+  .quick-score-btn.selected .quick-score-num{color:#fff;}
+  .quick-score-col:has(.quick-score-btn.selected) .quick-score-label{color:var(--fairway);font-weight:700;}
+  .quick-score-confirm{
+    display:flex;align-items:center;gap:8px;width:100%;margin-top:10px;padding:10px 12px;
+    background:#E3F5E9;border:1px solid rgba(0,103,71,.25);border-radius:10px;
+    color:var(--fairway);font-size:13px;font-weight:700;text-align:left;cursor:pointer;
+    animation:quickConfirmIntensify 4s ease-in forwards;
+  }
+  @keyframes quickConfirmIntensify{
+    0%{background:#E3F5E9;border-color:rgba(0,103,71,.25);}
+    100%{background:#6FDB9C;border-color:rgba(0,103,71,.8);}
+  }
+  .quick-score-confirm-check{
+    width:20px;height:20px;border-radius:50%;background:var(--fairway);color:#fff;
+    display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;
+  }
+  .quick-score-confirm-text{flex:1;}
+  .quick-score-confirm-clear{display:flex;align-items:center;gap:3px;color:var(--ink-soft);font-weight:600;font-size:12.5px;flex-shrink:0;}
+
+  /* holes */
+  .hole-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+  .hole-nav-btn{background:var(--fairway);color:var(--paper);border:none;width:34px;height:34px;border-radius:50%;font-size:16px;}
+  .hole-title-big{font-size:32px;line-height:1;}
+  .hole-meta{display:flex;gap:16px;margin-top:8px;margin-bottom:14px;}
+  .hole-meta div{font-size:12px;color:var(--ink-soft);}
+  .hole-meta b{display:block;font-family:'JetBrains Mono',monospace;font-size:16px;color:var(--fairway);font-weight:600;}
+  .hole-svg-wrap{background:var(--water-light);border-radius:10px;overflow:visible;margin-bottom:14px;border:1px solid var(--line);}
+  .hole-photo-frame{position:relative;}
+  .hazard-hint{font-size:11px;color:var(--ink-soft);text-align:center;margin:8px 0 12px;}
+  #reticleOverlayWrap{position:absolute;inset:0;pointer-events:none;}
+  .reticle-svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;}
+  .reticle-label{
+    position:absolute;transform:translate(-50%,-50%);
+    background:rgba(0,0,0,0.6);color:#fff;font-size:20px;font-weight:700;
+    padding:3px 9px;border-radius:12px;pointer-events:none;
+    font-family:'JetBrains Mono',monospace;white-space:nowrap;
+  }
+  .reticle-icon{
+    position:absolute;transform:translate(-50%,-50%);
+    pointer-events:none;filter:drop-shadow(0 1px 3px rgba(0,0,0,.5));
+  }
+  .reticle-icon-green{transform:translate(-21.4%,-100%);}
+  .reticle-marker{
+    position:absolute;transform:translate(-50%,-50%);
+    width:43px;height:43px;padding:0;border:none;background:none;
+    display:flex;align-items:center;justify-content:center;
+    pointer-events:auto;touch-action:none;
+    filter:drop-shadow(0 1px 3px rgba(0,0,0,.5));
+  }
+  .reticle-delete-x{
+    position:absolute;transform:translate(6px,-26px);
+    width:26px;height:26px;border-radius:50%;
+    background:var(--flag);color:#fff;border:2px solid #fff;
+    font-size:16px;line-height:1;font-weight:700;
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:0 2px 6px rgba(0,0,0,.4);
+    pointer-events:auto;z-index:10;
+  }
+
+  .score-confirm-bubble{
+    position:fixed;z-index:400;
+    background:#fff;border-radius:12px;
+    padding:10px 12px 8px;
+    box-shadow:0 6px 20px rgba(0,0,0,.3);
+    text-align:center;
+  }
+  .score-confirm-text{font-size:12.5px;font-weight:700;color:var(--ink);margin-bottom:8px;white-space:nowrap;}
+  .score-confirm-actions{display:flex;gap:8px;}
+  .score-confirm-actions button{
+    font-size:12px;font-weight:700;padding:6px 14px;border-radius:14px;border:none;
+  }
+  .score-confirm-yes{background:var(--fairway);color:#fff;}
+  .score-confirm-cancel{background:var(--parchment);color:var(--ink-soft);}
+  .score-confirm-bubble::after{
+    content:'';position:absolute;left:var(--arrow-left,50%);
+    transform:translateX(-50%);
+    border:6px solid transparent;
+  }
+  .score-confirm-bubble.arrow-above::after{top:100%;border-top-color:#fff;}
+  .score-confirm-bubble.arrow-below::after{bottom:100%;border-bottom-color:#fff;}
+  .media-source-menu{padding:6px;}
+  .media-source-option{
+    display:block;width:100%;white-space:nowrap;
+    font-size:13.5px;font-weight:600;color:var(--ink);
+    background:none;border:none;padding:9px 16px;text-align:left;border-radius:8px;
+  }
+  .media-source-option:active{background:var(--parchment);}
+
+  .confetti-piece{
+    position:fixed;top:-12px;width:8px;height:14px;opacity:0.95;
+    pointer-events:none;z-index:9999;border-radius:2px;
+    animation-name:confettiFall;animation-timing-function:ease-in;animation-fill-mode:forwards;
+  }
+  @keyframes confettiFall{
+    0%{transform:translateY(0) rotate(0deg);opacity:1;}
+    100%{transform:translateY(100vh) rotate(540deg);opacity:0;}
+  }
+  .snow-piece{
+    position:fixed;top:-24px;opacity:0.9;
+    pointer-events:none;z-index:9999;
+    animation-name:snowFall;animation-timing-function:linear;animation-fill-mode:forwards;
+  }
+  @keyframes snowFall{
+    0%{transform:translateY(0) translateX(0) rotate(0deg);opacity:0.95;}
+    100%{transform:translateY(100vh) translateX(var(--drift,0px)) rotate(200deg);opacity:0.3;}
+  }
+  @keyframes slideInLeft{from{transform:translateX(24px);opacity:0;}to{transform:translateX(0);opacity:1;}}
+  @keyframes slideInRight{from{transform:translateX(-24px);opacity:0;}to{transform:translateX(0);opacity:1;}}
+  .slide-left{animation:slideInLeft .22s ease;}
+  .slide-right{animation:slideInRight .22s ease;}
+  @keyframes tabSlideInLeft{from{transform:translateX(28px);opacity:0;}to{transform:translateX(0);opacity:1;}}
+  @keyframes tabSlideInRight{from{transform:translateX(-28px);opacity:0;}to{transform:translateX(0);opacity:1;}}
+  .tab-content.tab-slide-left{animation:tabSlideInLeft .24s ease;}
+  .tab-content.tab-slide-right{animation:tabSlideInRight .24s ease;}
+
+  /* interactive drag-follow swipe transition */
+  #swipeTrack{will-change:transform;}
+  #swipeViewport{touch-action:pan-y pinch-zoom;}
+  .hole-photo-frame{touch-action:pan-y pinch-zoom;-webkit-touch-callout:none;}
+  .swipe-ghost{
+    position:absolute;top:0;width:100%;
+    pointer-events:none;
+    opacity:0.55;
+  }
+  .hole-desc{font-size:14px;line-height:1.55;color:var(--ink);margin-bottom:14px;}
+  .contest-badge{
+    display:flex;align-items:center;gap:10px;
+    background:linear-gradient(90deg,#FBF3E1,#F6EAD0);
+    border:1px solid var(--gold-light);
+    border-radius:10px;padding:11px 12px;margin-bottom:10px;
+  }
+  .contest-badge .icon{font-size:20px;}
+  .contest-badge .label{font-size:11px;color:var(--fairway);font-weight:700;text-transform:uppercase;letter-spacing:.04em;}
+  .contest-badge .winner{font-size:14px;font-weight:600;color:var(--ink);margin-top:1px;}
+  .contest-winner-pill{
+    background:linear-gradient(180deg,#FBF3E1,#F3E6C4);border:1px solid var(--gold-light);border-radius:20px;
+    padding:5px 14px;font-size:12.5px;font-weight:700;color:var(--fairway);
+  }
+  .contest-winner-pill.static{opacity:.92;}
+  .contest-row{display:flex;align-items:center;gap:10px;padding:11px 2px;border-bottom:1px solid var(--line);}
+  .contest-row:last-child{border-bottom:none;}
+  .contest-row-icon{font-size:16px;flex-shrink:0;width:20px;text-align:center;opacity:.85;}
+  .contest-row-info{flex:1;min-width:0;}
+  .contest-row-name{font-size:14px;font-weight:700;color:var(--ink);}
+  .contest-row-sub{font-size:13px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.04em;margin-top:1px;}
+  .hole-dots{display:flex;justify-content:center;gap:5px;margin-top:14px;flex-wrap:wrap;}
+  .hole-dot{width:7px;height:7px;border-radius:50%;background:var(--line);}
+  .hole-dot.current{background:var(--fairway);width:16px;border-radius:4px;}
+  .hole-dot.contest{background:var(--gold);}
+
+  /* feed */
+  .post{border-bottom:1px solid var(--line);padding:14px 0;}
+  .post:last-child{border-bottom:none;}
+  .post-head{display:flex;align-items:center;gap:9px;margin-bottom:7px;}
+  .avatar{
+    width:32px;height:32px;border-radius:50%;
+    background:var(--fairway-light);color:#fff;
+    display:flex;align-items:center;justify-content:center;
+    font-weight:700;font-size:13px;flex-shrink:0;
+  }
+  .post-name{font-size:13.5px;font-weight:700;}
+  .post-time{font-size:11px;color:var(--ink-soft);}
+  .post-text{font-size:14px;line-height:1.5;margin-bottom:8px;}
+  .post-img{width:100%;border-radius:10px;display:block;margin-bottom:8px;}
+  img.post-img{cursor:zoom-in;}
+  .lightbox{
+    position:fixed;inset:0;z-index:300;
+    background:rgba(0,0,0,0.92);
+    display:flex;align-items:center;justify-content:center;
+    padding:20px;
+  }
+  .lightbox img{
+    max-width:100%;max-height:100%;
+    border-radius:8px;
+    box-shadow:0 10px 40px rgba(0,0,0,.6);
+  }
+  .lightbox-close{
+    position:absolute;top:16px;right:16px;
+    width:38px;height:38px;border-radius:50%;
+    background:rgba(255,255,255,0.15);color:#fff;border:none;
+    font-size:18px;line-height:1;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .post-like{display:flex;align-items:center;gap:5px;font-size:12.5px;color:var(--ink-soft);background:none;border:none;padding:2px 0;}
+  .post-actions{display:flex;align-items:center;gap:16px;margin-top:2px;}
+  .post-comment-toggle{display:flex;align-items:center;gap:5px;font-size:12.5px;color:var(--ink-soft);background:none;border:none;padding:2px 0;}
+  .comments-section{margin-top:8px;padding-top:8px;border-top:1px solid var(--line);}
+  .comments-empty{font-size:12px;color:var(--ink-soft);padding:2px 0 8px;}
+  .comment-row{padding:5px 0;font-size:12.5px;line-height:1.4;}
+  .comment-row .comment-name{font-weight:700;color:var(--ink);margin-right:6px;}
+  .comment-row .comment-text{color:var(--ink);}
+  .comment-compose{display:flex;gap:6px;margin-top:6px;}
+  .comment-input{
+    flex:1;font-size:12.5px;padding:7px 10px;
+    border:1.5px solid var(--line);border-radius:16px;
+    background:#fff;color:var(--ink);
+  }
+  .comment-send{
+    font-size:12px;font-weight:700;color:var(--fairway);
+    background:none;border:none;padding:4px 6px;flex-shrink:0;
+  }
+  .post-manage-btn{
+    font-size:12px;font-weight:600;color:var(--ink-soft);
+    background:none;border:none;padding:2px 0;margin-left:auto;
+  }
+  .post-manage-btn + .post-manage-btn{margin-left:12px;}
+  .post-manage-btn.danger{color:var(--flag);}
+  .post-edit-box textarea.post-edit-input{
+    width:100%;min-height:60px;font-size:13.5px;
+    border:1.5px solid var(--gold);border-radius:8px;
+    padding:8px;background:#fff;color:var(--ink);
+    font-family:inherit;margin-bottom:6px;resize:vertical;
+  }
+  .post-edit-actions{display:flex;gap:10px;margin-bottom:8px;}
+  .comment-manage{margin-left:8px;display:inline-flex;gap:8px;}
+  .comment-manage-btn{
+    font-size:11px;font-weight:600;color:var(--ink-soft);
+    background:none;border:none;padding:0;
+  }
+  .comment-manage-btn.danger{color:var(--flag);}
+  .comment-edit-box{display:flex;gap:6px;align-items:center;width:100%;}
+  .comment-edit-input{
+    flex:1;font-size:12.5px;padding:6px 9px;
+    border:1.5px solid var(--gold);border-radius:14px;
+    background:#fff;color:var(--ink);
+  }
+  .tag-row{display:flex;gap:6px;flex-wrap:wrap;margin:2px 0;}
+  .tag-chip{
+    background:#fff;border:1.5px solid var(--line);color:var(--ink-soft);
+    font-size:11.5px;font-weight:600;padding:5px 10px;border-radius:14px;
+  }
+  .tag-chip.active{background:var(--gold);border-color:var(--gold);color:#2A1E08;}
+  .tag-chip.filter{background:var(--parchment);}
+  .tag-chip.filter.active{background:var(--fairway);border-color:var(--fairway);color:var(--paper);}
+  .post-tags{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;}
+  .post-tag{
+    font-size:11px;font-weight:700;color:var(--fairway);
+    background:var(--gold-light);padding:3px 8px;border-radius:10px;
+  }
+  .post-like.liked{color:var(--flag);}
+  .composer{display:flex;flex-direction:column;gap:8px;}
+  .composer-row{display:flex;gap:8px;}
+  .file-btn{
+    border:1.5px dashed var(--line);border-radius:8px;
+    padding:9px;font-size:12.5px;color:var(--ink-soft);
+    text-align:center;flex:1;background:none;
+  }
+  .empty{text-align:center;color:var(--ink-soft);font-size:13px;padding:22px 10px;}
+
+  /* memorial */
+  .memorial-photo{
+    width:100%;aspect-ratio:16/10;object-fit:cover;
+    border-radius:12px;margin-bottom:14px;background:var(--fairway-light);
+  }
+  img.memorial-photo{cursor:zoom-in;}
+  .memorial-bio{font-size:14.5px;line-height:1.7;color:var(--ink);}
+  .memorial-bio[contenteditable=true]{outline:1.5px dashed var(--gold);border-radius:6px;padding:6px;}
+  .champ-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line);font-size:13.5px;}
+  .champ-row:last-child{border-bottom:none;}
+  .champ-year{
+    font-family:'JetBrains Mono',monospace;
+    color:var(--fairway);
+    font-weight:700;
+    -webkit-text-stroke:0.6px var(--gold);
+    text-shadow:-1px -1px 0 var(--gold),1px -1px 0 var(--gold),-1px 1px 0 var(--gold),1px 1px 0 var(--gold);
+  }
+
+  .edit-toggle{
+    display:flex;justify-content:flex-end;margin-bottom:-4px;
+  }
+  .toast{
+    position:fixed;bottom:88px;left:50%;transform:translateX(-50%);
+    background:var(--fairway);color:var(--paper);
+    padding:9px 16px;border-radius:20px;font-size:12.5px;font-weight:600;
+    opacity:0;pointer-events:none;transition:opacity .25s ease, transform .25s ease;
+    z-index:100;white-space:nowrap;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(-4px);}
+  .row-between{display:flex;justify-content:space-between;align-items:center;}
+  .tiny-btn{background:none;border:none;color:var(--ink-soft);font-size:12px;text-decoration:underline;padding:2px 0;}
+  .pcard-review td{padding:6px 2px;background:var(--parchment);}
+  .hole-preview-btn{
+    width:100%;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:2px;
+    background:none;
+    border:none;
+    color:var(--water);
+    font-weight:700;
+    line-height:1.15;
+    padding:4px 2px;
+  }
+  .hole-preview-btn .hpb-icon{font-size:15px;}
+  .hole-preview-btn .hpb-label{font-size:9px;letter-spacing:.01em;}
+  .name-gate{
+    position:fixed;inset:0;background:var(--fairway);z-index:200;
+    display:flex;align-items:center;justify-content:center;padding:24px;
+  }
+  .name-gate-card{background:var(--paper);border-radius:16px;padding:26px 22px;max-width:360px;width:100%;max-height:88vh;overflow-y:auto;}
+
+  .backup-bar{
+    max-width:560px;margin:0 auto;padding:0 16px 10px;
+  }
+  .backup-toggle{
+    width:100%;background:none;border:1px dashed var(--line);
+    color:var(--ink-soft);font-size:11.5px;font-weight:600;
+    padding:8px;border-radius:9px;text-align:center;
+  }
+  .backup-panel{
+    background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);
+    padding:14px 16px;margin-top:8px;
+  }
+  .backup-panel p{font-size:12.5px;color:var(--ink-soft);margin:0 0 10px;line-height:1.5;}
+  .backup-row{display:flex;gap:8px;}
+  .save-indicator{
+    font-size:11px;color:var(--ink-soft);text-align:center;margin-top:8px;min-height:14px;
+  }
+  .save-indicator.err{color:var(--flag);font-weight:600;}
+</style>
+</head>
+<body>
+
+<script>
+/* ---------------------------------------------------------
+   FIREBASE-BACKED STORAGE SHIM
+   Drop-in replacement for the window.storage API this app was
+   originally built against (get/set/delete/list, shared vs
+   personal). Every other line of app code below is unchanged --
+   it just talks to window.storage the same way it always did.
+   "shared" data lives in Firestore; "personal" (per-device) data
+   lives in localStorage, same scope it always had.
+--------------------------------------------------------- */
+(async function initFirebaseStorage(){
+  try{
+    const { initializeApp } = await import("https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js");
+    const {
+      initializeFirestore, doc, getDoc, setDoc, deleteDoc,
+      collection, query, where, getDocs, documentId
+    } = await import("https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js");
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAPwHRjm4VV0IwPmO9Q9wzcZQUHnsSPfZ8",
+      authDomain: "the-joey.firebaseapp.com",
+      projectId: "the-joey",
+      storageBucket: "the-joey.firebasestorage.app",
+      messagingSenderId: "916603414186",
+      appId: "1:916603414186:web:4b3bc3edc2ed8cdc9e52d3"
+    };
+
+    const fbApp = initializeApp(firebaseConfig);
+    // Works around a currently-open Firebase SDK bug (firebase-js-sdk#9789)
+    // where Safari 26.4+ (iPhone and Mac) takes ~10s per read using the
+    // default streaming transport. Long-polling sidesteps whatever's
+    // broken there. The documented tradeoff is "some performance
+    // degradation" for long-lived realtime listeners -- we don't use
+    // those (plain get/set only), so it costs us essentially nothing here.
+    const db = initializeFirestore(fbApp, {
+      experimentalForceLongPolling: true,
+      useFetchStreams: false
+    });
+    const COLLECTION = 'data';
+
+    window.storage = {
+      async get(key, shared){
+        if(!shared){
+          const v = localStorage.getItem('personal:' + key);
+          return v === null ? null : {key, value: v, shared:false};
+        }
+        const snap = await getDoc(doc(db, COLLECTION, key));
+        if(!snap.exists()) return null;
+        return {key, value: snap.data().value, shared:true};
+      },
+      async set(key, value, shared){
+        if(!shared){
+          localStorage.setItem('personal:' + key, value);
+          return {key, value, shared:false};
+        }
+        await setDoc(doc(db, COLLECTION, key), {value, updatedAt: Date.now()});
+        return {key, value, shared:true};
+      },
+      async delete(key, shared){
+        if(!shared){
+          localStorage.removeItem('personal:' + key);
+          return {key, deleted:true, shared:false};
+        }
+        await deleteDoc(doc(db, COLLECTION, key));
+        return {key, deleted:true, shared:true};
+      },
+      async list(prefix, shared){
+        if(!shared){
+          const keys = [];
+          for(let i=0;i<localStorage.length;i++){
+            const k = localStorage.key(i);
+            if(k && k.startsWith('personal:'+prefix)) keys.push(k.slice('personal:'.length));
+          }
+          return {keys, prefix, shared:false};
+        }
+        const q = query(
+          collection(db, COLLECTION),
+          where(documentId(), '>=', prefix),
+          where(documentId(), '<', prefix + '\uf8ff')
+        );
+        const snap = await getDocs(q);
+        const keys = snap.docs.map(d => d.id);
+        return {keys, prefix, shared:true};
+      },
+      // Same prefix match as list(), but returns each document's value in
+      // the same round trip -- avoids a separate get() per key afterward.
+      async listWithValues(prefix, shared){
+        if(!shared){
+          const items = [];
+          for(let i=0;i<localStorage.length;i++){
+            const k = localStorage.key(i);
+            if(k && k.startsWith('personal:'+prefix)){
+              items.push({key: k.slice('personal:'.length), value: localStorage.getItem(k)});
+            }
+          }
+          return {items, prefix, shared:false};
+        }
+        const q = query(
+          collection(db, COLLECTION),
+          where(documentId(), '>=', prefix),
+          where(documentId(), '<', prefix + '\uf8ff')
+        );
+        const snap = await getDocs(q);
+        const items = snap.docs.map(d => ({key: d.id, value: d.data().value}));
+        return {items, prefix, shared:true};
+      }
+    };
+
+    window.__storageReady = true;
+    document.dispatchEvent(new Event('storage-ready'));
+  }catch(err){
+    console.error('Firebase init failed', err);
+    window.__storageInitFailed = true;
+    document.dispatchEvent(new Event('storage-ready')); // let init() proceed to its own error handling
+  }
+})();
+</script>
+
+<div id="bootLoading" style="position:fixed;inset:0;z-index:500;background:var(--fairway);display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--paper);gap:14px;">
+  <div style="width:34px;height:34px;border:3px solid rgba(255,255,255,0.3);border-top-color:var(--paper);border-radius:50%;animation:bootspin 0.8s linear infinite;"></div>
+  <div style="font-size:13.5px;">Loading The Joey…</div>
+</div>
+<style>@keyframes bootspin{to{transform:rotate(360deg);}}</style>
+
+<div id="nameGate" class="name-gate" style="display:none;">
+  <div class="name-gate-card" id="gateStep1">
+    <h2 style="font-size:22px;margin-bottom:6px;">Welcome to The Joey</h2>
+    <p style="font-size:13.5px;color:var(--ink-soft);margin:0 0 18px;">Are you playing, or just along for the ride?</p>
+    <button class="btn block" id="gatePlayerBtn" style="margin-bottom:10px;">I'm Playing</button>
+    <button class="btn block secondary" id="gateGuestBtn">I'm a Guest</button>
+    <div style="text-align:center;margin-top:18px;">
+      <a href="#" id="gateAdminLink" style="font-size:11.5px;color:var(--ink-soft);text-decoration:underline;">Admin</a>
+    </div>
+  </div>
+
+  <div class="name-gate-card" id="gateStep2Team" style="display:none;">
+    <h2 style="font-size:20px;margin-bottom:6px;">Which team are you on?</h2>
+    <p style="font-size:13.5px;color:var(--ink-soft);margin:0 0 14px;">Only your team's scores will be editable on your phone.</p>
+    <div id="gateTeamList" style="display:flex;flex-direction:column;gap:8px;max-height:340px;overflow-y:auto;"></div>
+    <button class="tiny-btn" id="gateBackFromTeam" style="margin-top:14px;">← Back</button>
+  </div>
+
+  <div class="name-gate-card" id="gateStep2Name" style="display:none;">
+    <h2 style="font-size:20px;margin-bottom:6px;">What's your name?</h2>
+    <p style="font-size:13.5px;color:var(--ink-soft);margin:0 0 16px;" id="gateNameSubtext">This is how you'll show up in posts and comments.</p>
+    <div class="field">
+      <input type="text" id="nameGateInput" placeholder="Your name" maxlength="40">
+    </div>
+    <button class="btn block" id="gateNameContinueBtn">Continue</button>
+    <button class="tiny-btn" id="gateBackFromName" style="margin-top:12px;">← Back</button>
+  </div>
+
+  <div class="name-gate-card" id="gateStepAdmin" style="display:none;">
+    <h2 style="font-size:20px;margin-bottom:6px;">Admin access</h2>
+    <p style="font-size:13.5px;color:var(--ink-soft);margin:0 0 16px;">Enter the admin password to edit every team's scores.</p>
+    <div class="field">
+      <input type="password" id="gateAdminPassInput" placeholder="Password" maxlength="20">
+    </div>
+    <button class="btn block" id="gateAdminSubmitBtn">Unlock</button>
+    <div class="save-indicator err" id="gateAdminError" style="display:none;margin-top:8px;">Incorrect password</div>
+    <button class="tiny-btn" id="gateBackFromAdmin" style="margin-top:12px;">← Back</button>
+  </div>
+</div>
+
+<div id="welcomeBackToast" style="display:none;position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:250;background:var(--fairway);color:var(--paper);padding:10px 18px;border-radius:20px;font-size:13.5px;font-weight:600;box-shadow:0 4px 14px rgba(0,0,0,.3);"></div>
+
+<div id="lightbox" class="lightbox" style="display:none;">
+  <button class="lightbox-close" id="lightboxClose">✕</button>
+  <img id="lightboxImg" src="">
+</div>
+
+<div class="ribbon" id="memorialRibbon">Listen. Breathe. Laugh. Hug.<br><b>Love You Always. Joe</b></div>
+<div class="scorecard-header" id="scorecardHeader" style="display:none;">
+  <div class="scorecard-header-title">The Joey<span class="scorecard-header-year">🚩 2026</span></div>
+</div>
+
+<header class="hero" id="heroSection" style="display:none;">
+  <div class="hero-rule" style="margin-top:0;"></div>
+  <div class="hero-tagline">A tradition among friends, played in his honor</div>
+  <div class="hero-sub">The annual Joe McCormick Memorial — friends, family, and whoever else Joe would've dragged onto the course. Track scores, chase the trophies, and keep the stories coming.</div>
+  <div class="hero-date" id="heroYear">TOURNAMENT · 2026</div>
+</header>
+
+<div id="swipeViewport" style="position:relative;overflow:hidden;">
+  <div id="swipeTrack" style="position:relative;">
+    <div id="ghostPrev" class="swipe-ghost" style="left:-100%;"></div>
+    <main id="main"></main>
+    <div id="ghostNext" class="swipe-ghost" style="left:100%;"></div>
+  </div>
+</div>
+
+<div class="backup-bar">
+  <button class="backup-toggle" id="syncNowBtn" style="margin-right:6px;">↻ Sync</button>
+  <button class="backup-toggle" id="identityToggle" style="margin-right:6px;">👤 Account</button>
+  <button class="backup-toggle" id="backupToggle">⚙ Backup &amp; Restore</button>
+  <div class="backup-panel" id="identityPanel" style="display:none;">
+    <p id="identitySummary"></p>
+    <div class="backup-row">
+      <button class="btn secondary small" id="identityResetBtn" style="flex:1;">Not you? Reset</button>
+      <button class="btn small" id="identityAdminBtn" style="flex:1;">Enable Admin</button>
+    </div>
+  </div>
+  <div class="backup-panel" id="backupPanel" style="display:none;">
+    <p>Download a full backup any time — teams, scores, holes, photos, everything. If a refresh ever loses data, restore from your last backup and you're back where you were.</p>
+    <div class="backup-row">
+      <button class="btn secondary small" id="downloadBackupBtn" style="flex:1;">⬇ Download backup</button>
+      <label class="btn small" style="flex:1;text-align:center;">⬆ Restore backup<input type="file" accept="application/json" id="restoreBackupInput" style="display:none;"></label>
+    </div>
+    <div class="save-indicator" id="saveIndicator"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<nav class="tabbar" id="tabbar">
+  <button data-tab="scorecard" class="active">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 4v16"/></svg>
+    Scorecard
+  </button>
+  <button data-tab="leaderboard">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M17 5h2a2 2 0 0 1 0 4h-1.5"/><path d="M7 5H5a2 2 0 0 0 0 4h1.5"/><path d="M12 14v4"/><path d="M9 20h6"/></svg>
+    Leaderboard
+  </button>
+  <button data-tab="holes">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 21V4a1 1 0 0 1 1.5-.87l9 5a1 1 0 0 1 0 1.74l-9 5"/></svg>
+    Holes
+  </button>
+  <button data-tab="feed">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H9l-4 3v-3H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z" stroke-linejoin="round"/><line x1="7" y1="10.5" x2="8.5" y2="10.5" stroke-linecap="round"/><line x1="10.5" y1="10.5" x2="13.5" y2="10.5" stroke-linecap="round"/><line x1="15.5" y1="10.5" x2="17" y2="10.5" stroke-linecap="round"/></svg>
+    Feed
+  </button>
+  <button data-tab="joe">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s-7-4.5-9.5-9A5.5 5.5 0 0 1 12 6a5.5 5.5 0 0 1 9.5 6c-2.5 4.5-9.5 9-9.5 9z"/></svg>
+    Joe
+  </button>
+</nav>
+
+<script>
+/* hole photo data (base64) */
+const HOLE_PHOTO_5 = "";
+const HOLE_PHOTO_1 = "";
+const HOLE_PHOTO_2 = "";
+const HOLE_PHOTO_3 = "";
+const HOLE_PHOTO_4 = "";
+const HOLE_PHOTO_6 = "";
+const HOLE_PHOTO_7 = "";
+const HOLE_PHOTO_8 = "";
+const HOLE_PHOTO_9 = "";
+const HOLE_PHOTO_10 = "";
+const HOLE_PHOTO_11 = "";
+const HOLE_PHOTO_12 = "";
+const HOLE_PHOTO_13 = "";
+const HOLE_PHOTO_14 = "";
+const HOLE_PHOTO_15 = "";
+const HOLE_PHOTO_16 = "";
+const HOLE_PHOTO_17 = "";
+const HOLE_PHOTO_18 = "";
+
+
+/* ---------------------------------------------------------
+   STATE
+--------------------------------------------------------- */
+let myName = null;
+let myRole = null;      // 'player' | 'guest' | null
+let myTeamId = null;    // team id if myRole==='player'
+let isAdminSession = false; // never persisted -- must be re-entered each app load
+let currentTab = 'scorecard';
+let tabSlideDir = null;
+let scorecardMode = 'score'; // 'score' | 'manage'
+let scoreboardSelectedTeam = null;
+let scoreboardGroupFilter = 'all';
+let currentHoleIndex = 0;
+let sessionReticles = {};      // { holeNumber: [{x,y}, ...] } -- session-only, ephemeral, never persisted
+let calibrationMode = null;    // { holeNumber, step: 'tee'|'green' } while an admin is calibrating a hole
+let reticleDrag = null;        // { holeNumber, index, moved } during an active long-press/drag
+let reticleDeleteTimeout = null; // auto-fade timer for the floating × delete button
+let holeSlideDir = null;
+
+let teams = [];             // [{id, label, groupId, players:[name,...]}]
+let groups = [];            // [{id, label, teeTime}]
+let scores = {};            // { teamId: {1:4, 2:5, ...} }  -- scramble: one score per team per hole
+let holesConfig = null;     // [{number,par,yards,shape,bunker,water,contestType,description}]
+let contests = {};          // { holeNumber: {winner, distance} }
+let extraContests = [];     // [{id, name, location, winner, distance}] -- contests not tied to a hole (e.g. Practice Green)
+let contestsLocked = false; // when true, only admin can set contest winners; players can while unlocked
+let feedPosts = [];         // [{id,name,text,img,time,likes,likedByMe}]
+let tributePosts = [];
+let memorialBio = "";
+let memorialPhoto = null;
+let champions = [];         // [{year,name}]
+let heroYearText = "TOURNAMENT · 2026";
+
+/* ---------------------------------------------------------
+   PER-HOLE STORAGE
+   Each hole (par, description, calibration, photo, everything)
+   lives under its own key (hole-config:<number>) instead of one
+   shared 18-hole blob. Firestore hard-caps every document at
+   1 MiB -- 18 holes' worth of embedded photos blows past that
+   easily, and the whole write silently fails. Splitting per-hole
+   keeps each document comfortably under that limit on its own.
+--------------------------------------------------------- */
+async function loadAllHoles(){
+  const byNumber = {};
+  // one-time migration: pull in the old single-blob format if present
+  try{
+    const legacy = await window.storage.get('holes-config', true);
+    if(legacy && legacy.value){
+      const parsed = JSON.parse(legacy.value);
+      (parsed||[]).forEach(h=>{ byNumber[h.number] = h; });
+    }
+  }catch(e){}
+
+  try{
+    const listed = await window.storage.listWithValues('hole-config:', true);
+    const items = (listed && listed.items) ? listed.items : [];
+    items.forEach(({value})=>{
+      try{
+        if(value){
+          const h = JSON.parse(value);
+          byNumber[h.number] = h;
+        }
+      }catch(e){}
+    });
+  }catch(e){}
+
+  const result = Object.values(byNumber);
+  return result.length ? result.sort((a,b)=>a.number-b.number) : defaultHoles();
+}
+
+async function saveHole(h){
+  await save('hole-config:' + h.number, JSON.stringify(h), true);
+}
+
+/* ---------------------------------------------------------
+   DEFAULT HOLES (organizer can edit each one)
+--------------------------------------------------------- */
+function defaultHoles(){
+  const d = [
+    {number:1,par:4,yards:361,handicap:11,shape:'straight',contestType:null,photo:HOLE_PHOTO_1,
+      description:'A friendly handshake of an opener. Straightaway, generous fairway — settle the nerves before the course starts asking real questions.'},
+    {number:2,par:4,yards:334,handicap:5,shape:'straight',contestType:null,photo:HOLE_PHOTO_2,
+      description:'Bends toward the clubhouse with bunkers guarding the green. Good drive here sets up a short-iron look at birdie.'},
+    {number:3,par:3,yards:140,handicap:17,shape:'straight',contestType:'ctp',photo:HOLE_PHOTO_3,
+      description:'All carry, no bailout. Joe used to say this was the hole that told you who\'d been practicing and who\'d been making excuses.'},
+    {number:4,par:4,yards:289,handicap:15,shape:'straight',contestType:null,photo:HOLE_PHOTO_4,
+      description:'Short par 4 that tempts you to be aggressive off the tee — the greenside bunkers punish anyone who gets greedy.'},
+    {number:5,par:4,yards:307,handicap:9,shape:'straight',contestType:null,photo:HOLE_PHOTO_5,
+      description:'A short, scenic par 4 running along the tree line with the water visible off the tee. Bunkers guard the front and left of the green — favor the right side of the fairway for the cleanest angle in.'},
+    {number:6,par:4,yards:328,handicap:1,shape:'straight',contestType:null,photo:HOLE_PHOTO_6,
+      description:'The number-one handicap hole for a reason. Water short of the green means committing fully to the yardage, no hedging.'},
+    {number:7,par:4,yards:350,handicap:3,shape:'straight',contestType:null,photo:HOLE_PHOTO_7,
+      description:'A demanding tee shot into a well-bunkered green complex. Center of the green is always the smart play here.'},
+    {number:8,par:5,yards:456,handicap:7,shape:'straight',contestType:'longdrive',photo:HOLE_PHOTO_8,
+      description:'The longest hole on the course, and somehow the one with the most stories attached to it. Grip it and rip it.'},
+    {number:9,par:4,yards:331,handicap:13,shape:'dogleg-left',contestType:null,photo:HOLE_PHOTO_9,
+      description:'Closes the front nine with bunkers pinching the landing area. Keep it in play and take your two putts.'},
+    {number:10,par:4,yards:303,handicap:14,shape:'straight',contestType:null,photo:HOLE_PHOTO_10,
+      description:'A clean, honest start to the back nine. No tricks — just hit the fairway and take your medicine.'},
+    {number:11,par:5,yards:410,handicap:2,shape:'straight',contestType:'longdrive',photo:HOLE_PHOTO_11,
+      description:'Big, demanding par 5 — the number-two handicap hole. Three good shots get you home in position to make birdie.'},
+    {number:12,par:3,yards:139,handicap:16,shape:'straight',contestType:'ctp',photo:HOLE_PHOTO_12,
+      description:'All water, all carry. Joe went in the drink here more than once and still called it his favorite hole on the course.'},
+    {number:13,par:4,yards:418,handicap:6,shape:'straight',contestType:null,photo:HOLE_PHOTO_13,
+      description:'A tough, well-bunkered two-shotter. Accuracy over distance today.'},
+    {number:14,par:4,yards:351,handicap:10,shape:'dogleg-right',contestType:null,photo:HOLE_PHOTO_14,
+      description:'Water lurks right of the green. A gentle dogleg where solid, unspectacular golf gets rewarded.'},
+    {number:15,par:3,yards:114,handicap:18,shape:'straight',contestType:'ctp',photo:HOLE_PHOTO_15,
+      description:'The shortest hole on the card, right along the water. Don\'t let the yardage fool you into getting careless.'},
+    {number:16,par:5,yards:495,handicap:4,shape:'dogleg-right',contestType:'longdrive',photo:HOLE_PHOTO_16,
+      description:'A big, sweeping par 5 with water in play. The last real chance to pad the scorecard before things get tight.'},
+    {number:17,par:3,yards:144,handicap:12,shape:'straight',contestType:'ctp',photo:HOLE_PHOTO_17,
+      description:'A demanding par 3 to a well-guarded green. Trust the number and commit to the swing.'},
+    {number:18,par:5,yards:501,handicap:8,shape:'straight',contestType:'longdrive',photo:HOLE_PHOTO_18,
+      description:'Home hole. Finish the way Joe would\'ve — going for it.'},
+  ];
+  return d;
+}
+
+/* ---------------------------------------------------------
+   STORAGE HELPERS
+--------------------------------------------------------- */
+async function loadAll(){
+  try{
+    const tm = await window.storage.get('teams', true);
+    teams = tm ? JSON.parse(tm.value) : [];
+  }catch(e){ teams = []; }
+
+  try{
+    const g = await window.storage.get('groups', true);
+    groups = g ? JSON.parse(g.value) : [];
+  }catch(e){ groups = []; }
+
+  scores = await loadAllScores();
+
+  holesConfig = await loadAllHoles();
+
+  try{
+    const c = await window.storage.get('contests', true);
+    contests = c ? JSON.parse(c.value) : {};
+  }catch(e){ contests = {}; }
+
+  try{
+    const ec = await window.storage.get('extra-contests', true);
+    extraContests = (ec && ec.value) ? JSON.parse(ec.value) : null;
+  }catch(e){ extraContests = null; }
+  if(!extraContests){
+    // first time ever loading, or storage isn't available yet (e.g. unpublished
+    // preview) -- seed the default Practice Green contest either way so it's
+    // never just missing
+    extraContests = [{id:'golden-boy', name:'The Golden Boy', location:'Practice Green', winner:'', distance:''}];
+    try{ await save('extra-contests', JSON.stringify(extraContests), true); }catch(e){}
+  }
+
+  try{
+    const cl = await window.storage.get('contests-locked', true);
+    contestsLocked = cl ? cl.value === 'true' : false;
+  }catch(e){ contestsLocked = false; }
+
+  feedPosts = await loadAllPosts('feed-post:', 'feed-posts');
+  tributePosts = await loadAllPosts('tribute-post:', 'tribute-posts');
+
+  try{
+    const b = await window.storage.get('memorial-bio', true);
+    memorialBio = b ? b.value : defaultBio();
+  }catch(e){ memorialBio = defaultBio(); }
+
+  try{
+    const p = await window.storage.get('memorial-photo', true);
+    memorialPhoto = p ? p.value : null;
+  }catch(e){ memorialPhoto = null; }
+
+  try{
+    const ch = await window.storage.get('champions', true);
+    champions = ch ? JSON.parse(ch.value) : [];
+  }catch(e){ champions = []; }
+
+  try{
+    const y = await window.storage.get('hero-year', true);
+    heroYearText = y ? y.value : heroYearText;
+  }catch(e){}
+
+  try{
+    const n = await window.storage.get('my-name', false);
+    myName = n ? n.value : null;
+  }catch(e){ myName = null; }
+  try{
+    const r = await window.storage.get('my-role', false);
+    myRole = r ? r.value : null;
+  }catch(e){ myRole = null; }
+  try{
+    const t = await window.storage.get('my-team-id', false);
+    myTeamId = t ? t.value : null;
+  }catch(e){ myTeamId = null; }
+  // admin never persists -- always starts locked on a fresh load
+  isAdminSession = false;
+}
+
+/* ---------------------------------------------------------
+   PER-TEAM SCORE STORAGE
+   Each team's scores live under their own key (team-score:<id>)
+   instead of one shared blob, so two scorekeepers on different
+   teams never overwrite each other's saves.
+--------------------------------------------------------- */
+function scoreKey(tid){ return 'team-score:'+tid; }
+
+async function loadAllScores(){
+  const out = {};
+  // one-time migration: pull in the old single-blob format if present
+  try{
+    const legacy = await window.storage.get('team-scores', true);
+    if(legacy && legacy.value){
+      const parsed = JSON.parse(legacy.value);
+      Object.assign(out, parsed);
+    }
+  }catch(e){}
+
+  // per-team keys take precedence over the legacy blob
+  try{
+    const listed = await window.storage.listWithValues('team-score:', true);
+    const items = (listed && listed.items) ? listed.items : [];
+    items.forEach(({key, value})=>{
+      try{
+        const tid = key.slice('team-score:'.length);
+        if(value) out[tid] = JSON.parse(value);
+      }catch(e){}
+    });
+  }catch(e){}
+
+  return out;
+}
+
+async function saveTeamScore(tid){
+  await save(scoreKey(tid), JSON.stringify(scores[tid] || {}), true);
+}
+
+async function deleteTeamScore(tid){
+  try{ await window.storage.delete(scoreKey(tid), true); }catch(e){}
+}
+
+/* ---------------------------------------------------------
+   PER-POST STORAGE (Feed + Tribute Wall)
+   Each post lives under its own key (feed-post:<id> or
+   tribute-post:<id>) instead of one shared array, so two people
+   posting, liking, or replying at the same moment never
+   overwrite each other's save with a stale copy of the list.
+--------------------------------------------------------- */
+async function loadAllPosts(prefix, legacyKey){
+  const byId = {};
+  // one-time migration: pull in the old single-blob format if present
+  try{
+    const legacy = await window.storage.get(legacyKey, true);
+    if(legacy && legacy.value){
+      const parsed = JSON.parse(legacy.value);
+      (parsed||[]).forEach(p=>{ byId[p.id] = p; });
+    }
+  }catch(e){}
+
+  try{
+    const listed = await window.storage.listWithValues(prefix, true);
+    const items = (listed && listed.items) ? listed.items : [];
+    items.forEach(({value})=>{
+      try{
+        if(value){
+          const post = JSON.parse(value);
+          byId[post.id] = post;
+        }
+      }catch(e){}
+    });
+  }catch(e){}
+
+  return Object.values(byId).sort((a,b)=>a.time-b.time);
+}
+
+async function savePost(post, prefix){
+  await save(prefix + post.id, JSON.stringify(post), true);
+}
+
+async function deletePost(id, prefix){
+  try{ await window.storage.delete(prefix + id, true); }catch(e){}
+}
+
+function defaultBio(){
+  return "Joe McCormick loved three things without reservation: his people, a good story told twice as long as it needed to be, and golf played just seriously enough to matter. This tournament started as a way to get everyone back together, and it's stayed that way — equal parts competition and reunion.\n\nEdit this page to add your own memories, photos, and the story behind the trophy.";
+}
+
+async function save(key, value, shared=true){
+  try{
+    const res = await window.storage.set(key, value, shared);
+    if(!res){
+      flagSaveIssue(true);
+      return false;
+    }
+    flagSaveIssue(false);
+    return true;
+  }catch(e){
+    console.error('save failed', key, e);
+    flagSaveIssue(true);
+    return false;
+  }
+}
+function flagSaveIssue(failed){
+  const el = document.getElementById('saveIndicator');
+  if(!el) return;
+  if(failed){
+    el.textContent = "Last change may not have saved — download a backup and check your connection.";
+    el.classList.add('err');
+  } else {
+    el.textContent = "All changes saved to this device's session.";
+    el.classList.remove('err');
+  }
+}
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(()=>t.classList.remove('show'), 1600);
+}
+
+/* ---------------------------------------------------------
+   IDENTITY GATE
+   Player (picks their team) / Guest (name only) / Admin (password,
+   session-only -- never persisted, must be re-entered each app load).
+--------------------------------------------------------- */
+const ADMIN_PASSWORD = 'joey';
+
+function checkNameGate(){
+  if(myName && myRole){
+    showWelcomeBackToast();
+    return;
+  }
+  document.getElementById('nameGate').style.display = 'flex';
+  gateShowStep('gateStep1');
+}
+
+function showWelcomeBackToast(){
+  const toast = document.getElementById('welcomeBackToast');
+  if(!toast) return;
+  toast.textContent = `Welcome back, ${myName}`;
+  toast.style.display = 'block';
+  toast.style.opacity = '1';
+  setTimeout(()=>{
+    toast.style.transition = 'opacity 400ms ease';
+    toast.style.opacity = '0';
+    setTimeout(()=>{ toast.style.display='none'; toast.style.transition=''; }, 420);
+  }, 3000);
+}
+
+function gateShowStep(id){
+  ['gateStep1','gateStep2Team','gateStep2Name','gateStepAdmin'].forEach(s=>{
+    document.getElementById(s).style.display = (s===id) ? 'block' : 'none';
+  });
+}
+
+let gatePendingRole = null; // 'player' | 'guest' | 'admin-name' while mid-flow
+
+function wireIdentityGate(){
+  const playerBtn = document.getElementById('gatePlayerBtn');
+  const guestBtn = document.getElementById('gateGuestBtn');
+  const adminLink = document.getElementById('gateAdminLink');
+  if(playerBtn) playerBtn.onclick = ()=>{
+    const list = document.getElementById('gateTeamList');
+    list.innerHTML = teams.map(t=>`
+      <button class="btn secondary block" data-gate-team="${t.id}" style="display:flex;align-items:center;gap:10px;text-align:left;">
+        <span style="flex:0 0 auto;min-width:58px;font-weight:700;">Team ${escapeHtml(t.label)}</span>
+        <span style="flex:1;text-align:left;font-size:12px;font-weight:400;color:var(--ink-soft);">${escapeHtml((t.players||[]).join(' · ')) || 'No players listed'}</span>
+      </button>`).join('') || `<p style="font-size:13px;color:var(--ink-soft);">No teams have been set up yet.</p>`;
+    list.querySelectorAll('[data-gate-team]').forEach(btn=>{
+      btn.onclick = ()=>{
+        myTeamId = btn.dataset.gateTeam;
+        gatePendingRole = 'player';
+        document.getElementById('gateNameSubtext').textContent = "This is how you'll show up in posts, comments, and on the scorecard.";
+        gateShowStep('gateStep2Name');
+        document.getElementById('nameGateInput').focus();
+      };
+    });
+    gateShowStep('gateStep2Team');
+  };
+  if(guestBtn) guestBtn.onclick = ()=>{
+    myTeamId = null;
+    gatePendingRole = 'guest';
+    document.getElementById('gateNameSubtext').textContent = "This is how you'll show up in posts and comments. You'll be able to view scores but not enter them.";
+    gateShowStep('gateStep2Name');
+    document.getElementById('nameGateInput').focus();
+  };
+  if(adminLink) adminLink.onclick = (e)=>{
+    e.preventDefault();
+    document.getElementById('gateAdminPassInput').value = '';
+    document.getElementById('gateAdminError').style.display = 'none';
+    gateShowStep('gateStepAdmin');
+  };
+  const backFromTeam = document.getElementById('gateBackFromTeam');
+  if(backFromTeam) backFromTeam.onclick = ()=>gateShowStep('gateStep1');
+  const backFromName = document.getElementById('gateBackFromName');
+  if(backFromName) backFromName.onclick = ()=>gateShowStep(gatePendingRole==='player' ? 'gateStep2Team' : 'gateStep1');
+  const backFromAdmin = document.getElementById('gateBackFromAdmin');
+  if(backFromAdmin) backFromAdmin.onclick = ()=>gateShowStep('gateStep1');
+
+  const nameContinueBtn = document.getElementById('gateNameContinueBtn');
+  if(nameContinueBtn) nameContinueBtn.onclick = setMyName;
+
+  const adminSubmitBtn = document.getElementById('gateAdminSubmitBtn');
+  if(adminSubmitBtn) adminSubmitBtn.onclick = ()=>{
+    const pass = document.getElementById('gateAdminPassInput').value.trim().toLowerCase();
+    if(pass !== ADMIN_PASSWORD){
+      document.getElementById('gateAdminError').style.display = 'block';
+      return;
+    }
+    isAdminSession = true;
+    updateAdminUI();
+    if(myName && myRole){
+      // already have an identity on this device -- just unlock admin editing, no need to re-enter name
+      document.getElementById('nameGate').style.display = 'none';
+      showToast('Admin unlocked for this session');
+      render();
+    } else {
+      myTeamId = null;
+      gatePendingRole = 'admin-name';
+      document.getElementById('gateNameSubtext').textContent = "This is how you'll show up in posts and comments.";
+      gateShowStep('gateStep2Name');
+      document.getElementById('nameGateInput').focus();
+    }
+  };
+}
+
+async function setMyName(){
+  const v = document.getElementById('nameGateInput').value.trim();
+  if(!v) return;
+  myName = v;
+  myRole = (gatePendingRole==='player') ? 'player' : 'guest'; // admin unlock still saves as guest identity
+  await save('my-name', v, false);
+  await save('my-role', myRole, false);
+  if(myRole==='player' && myTeamId){
+    await save('my-team-id', myTeamId, false);
+  }
+  document.getElementById('nameGate').style.display = 'none';
+  updateAdminUI();
+  render();
+}
+
+function resetIdentity(){
+  myName = null; myRole = null; myTeamId = null; isAdminSession = false;
+  document.getElementById('nameGate').style.display = 'flex';
+  gateShowStep('gateStep1');
+  updateAdminUI();
+}
+
+function updateAdminUI(){
+  // Backup & Restore lives outside the normal render() cycle, so it needs
+  // its own show/hide toggle whenever admin status changes
+  const backupBtn = document.getElementById('backupToggle');
+  if(backupBtn) backupBtn.style.display = isAdminSession ? '' : 'none';
+
+  // Guests don't get a Scorecard tab at all -- they land on Leaderboard instead
+  const scorecardTabBtn = document.querySelector('.tabbar [data-tab="scorecard"]');
+  if(scorecardTabBtn) scorecardTabBtn.style.display = (myRole==='guest' && !isAdminSession) ? 'none' : '';
+}
+
+/* ---------------------------------------------------------
+   SCORE HELPERS
+--------------------------------------------------------- */
+function teamTotals(teamId){
+  const s = scores[teamId] || {};
+  let strokes = 0, par = 0, thru = 0;
+  holesConfig.forEach(h=>{
+    const val = s[h.number];
+    if(val){ strokes += val; par += h.par; thru++; }
+  });
+  return {strokes, par, thru, diff: strokes-par};
+}
+function nextTeamLabel(){
+  const used = new Set(teams.map(t=>t.label));
+  for(let i=0;i<26;i++){
+    const letter = String.fromCharCode(65+i);
+    if(!used.has(letter)) return letter;
+  }
+  return 'Team ' + (teams.length+1);
+}
+function groupName(groupId){
+  const g = groups.find(g=>g.id===groupId);
+  return g ? g.label : null;
+}
+function teamsInGroup(groupId){
+  return teams.filter(t=>t.groupId===groupId);
+}
+function unassignedTeams(){
+  return teams.filter(t=>!t.groupId || !groups.find(g=>g.id===t.groupId));
+}
+function scoreClass(score, par){
+  if(!score) return '';
+  const d = score - par;
+  if(d <= -2) return 'eagle';
+  if(d === -1) return 'birdie';
+  if(d === 1) return 'bogey';
+  if(d >= 2) return 'dbogey';
+  return '';
+}
+// Proper golf terminology for the Quick Score Entry labels.
+// Snowman (score of 8) always wins regardless of par, since that's a
+// literal-strokes nickname, not a relative-to-par one.
+function quickScoreLabel(score, par){
+  if(score===8) return 'Snowman';
+  if(score===1) return 'Hole in One';
+  const d = score - par;
+  if(d <= -3) return 'Albatross';
+  if(d === -2) return 'Eagle';
+  if(d === -1) return 'Birdie';
+  if(d === 0) return 'Par';
+  if(d === 1) return 'Bogey';
+  return `+${d}`;
+}
+function fmtDiff(d, thru){
+  if(thru===0) return '—';
+  if(d===0) return 'E';
+  return d>0 ? '+'+d : String(d);
+}
+function initials(name){
+  return name.trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase();
+}
+// Splits a team's player names across two lines: 2 names -> one per
+// line, 3 names -> two on the first line, one on the second.
+// Flag-with-magnifying-glass icon used on every "preview this hole" button.
+// Uses currentColor so it automatically matches whatever button it's in.
+const HOLE_PREVIEW_ICON_SVG = `<svg viewBox="0 0 32 32" width="1em" height="1em" style="display:block;">
+  <line x1="7" y1="29" x2="7" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <path d="M7 3 L16 6.5 L7 10 Z" fill="currentColor"/>
+  <circle cx="21" cy="21" r="6.5" fill="none" stroke="currentColor" stroke-width="2.2"/>
+  <line x1="25.6" y1="25.6" x2="29.5" y2="29.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>
+</svg>`;
+
+function playerNameLines(players){
+  const list = players || [];
+  if(list.length <= 1) return `<div>${escapeHtml(list.join(''))}</div>`;
+  const firstCount = Math.ceil(list.length/2);
+  const row1 = list.slice(0, firstCount).join(' · ');
+  const row2 = list.slice(firstCount).join(' · ');
+  return `<div>${escapeHtml(row1)}</div><div>${escapeHtml(row2)}</div>`;
+}
+function timeAgo(ts){
+  const diff = Math.floor((Date.now()-ts)/1000);
+  if(diff<60) return 'just now';
+  if(diff<3600) return Math.floor(diff/60)+'m ago';
+  if(diff<86400) return Math.floor(diff/3600)+'h ago';
+  return Math.floor(diff/86400)+'d ago';
+}
+
+/* ---------------------------------------------------------
+   HOLE SVG
+--------------------------------------------------------- */
+function holeSvg(h){
+  const W=320,H=260;
+  let fairwayPath, teeX=160, teeY=235, pinX=160, pinY=35;
+  if(h.shape==='dogleg-left'){
+    pinX=95; fairwayPath = `M120,240 C60,180 70,120 60,60 C55,35 75,20 100,25 L200,25 C210,60 190,110 190,160 C190,200 170,225 120,240 Z`;
+  } else if(h.shape==='dogleg-right'){
+    pinX=225; fairwayPath = `M200,240 C260,180 250,120 260,60 C265,35 245,20 220,25 L120,25 C110,60 130,110 130,160 C130,200 150,225 200,240 Z`;
+  } else {
+    fairwayPath = `M115,240 C100,180 105,100 118,30 L202,30 C215,100 220,180 205,240 Z`;
+  }
+  const bunker = h.bunker ? `<ellipse cx="${pinX>160?pinX-55:pinX+55}" cy="${pinY+35}" rx="20" ry="12" fill="var(--sand)" opacity="0.9"/>` : '';
+  const water = h.water ? `<path d="M${h.shape==='dogleg-left'?'190,150 Q230,140 250,170 Q260,200 230,210 Q195,205 190,180 Z':'130,150 Q90,140 70,170 Q60,200 90,210 Q125,205 130,180 Z'}" fill="var(--water)" opacity="0.85"/>` : '';
+  return `
+  <svg viewBox="0 0 ${W} ${H}" width="100%" height="220" xmlns="http://www.w3.org/2000/svg">
+    <rect width="${W}" height="${H}" fill="var(--water-light)"/>
+    <rect width="${W}" height="${H}" fill="#E4EDE0"/>
+    <path d="${fairwayPath}" fill="#8FB781" stroke="#6E9862" stroke-width="2"/>
+    ${water}
+    ${bunker}
+    <rect x="${teeX-14}" y="${teeY-8}" width="28" height="16" rx="3" fill="var(--fairway)"/>
+    <circle cx="${pinX}" cy="${pinY+18}" r="9" fill="#fff" stroke="var(--fairway)" stroke-width="2"/>
+    <line x1="${pinX}" y1="${pinY+10}" x2="${pinX}" y2="${pinY-22}" stroke="var(--ink)" stroke-width="2"/>
+    <path d="M${pinX},${pinY-22} L${pinX},${pinY-10} L${pinX+14},${pinY-16} Z" fill="var(--flag)"/>
+  </svg>`;
+}
+
+/* ---------------------------------------------------------
+   RENDER: ROUTER
+--------------------------------------------------------- */
+function render(){
+  // Rebuilding the DOM on every render would otherwise reset the Front/Back
+  // Nine tables' horizontal scroll (including the auto-scroll-to-current-hole
+  // on tab entry) back to the start. Preserve it across every render, not
+  // just specific handlers.
+  const __pcardScrollPositions = Array.from(document.querySelectorAll('.pcard-scroll')).map(el=>el.scrollLeft);
+  renderInner();
+  if(__pcardScrollPositions.length){
+    requestAnimationFrame(()=>{
+      document.querySelectorAll('.pcard-scroll').forEach((el,i)=>{
+        if(__pcardScrollPositions[i] !== undefined) el.scrollLeft = __pcardScrollPositions[i];
+      });
+    });
+  }
+}
+function renderInner(){
+  if(currentTab==='scorecard' && myRole==='guest' && !isAdminSession){
+    currentTab = 'leaderboard';
+  }
+  document.getElementById('heroYear').textContent = heroYearText;
+  document.getElementById('heroSection').style.display = (currentTab==='joe') ? '' : 'none';
+  document.getElementById('memorialRibbon').style.display = (currentTab==='scorecard' || currentTab==='holes') ? 'none' : '';
+  document.getElementById('scorecardHeader').style.display = (currentTab==='scorecard') ? '' : 'none';
+  const m = document.getElementById('main');
+  let content = '';
+  if(currentTab==='leaderboard') content = renderLeaderboard();
+  if(currentTab==='scorecard') content = renderScorecard();
+  if(currentTab==='holes') content = renderHoles();
+  if(currentTab==='feed') content = renderFeed();
+  if(currentTab==='joe') content = renderJoe();
+  const slideClass = tabSlideDir ? ('tab-slide-'+tabSlideDir) : '';
+  tabSlideDir = null;
+  m.innerHTML = `<div class="tab-content ${slideClass}">${content}</div>`;
+  attachHandlers();
+}
+
+/* ---------------------------------------------------------
+   LEADERBOARD
+--------------------------------------------------------- */
+function renderLeaderboard(){
+  const rows = teams.map(t=>({t, tot:teamTotals(t.id)}))
+    .sort((a,b)=>{
+      if(a.tot.thru===0 && b.tot.thru===0) return a.t.label.localeCompare(b.t.label);
+      if(a.tot.thru===0) return 1;
+      if(b.tot.thru===0) return -1;
+      return a.tot.diff - b.tot.diff;
+    });
+  const medals = ['🥇','🥈','🥉'];
+  let rowsHtml = rows.map((r,i)=>{
+    const cls = r.tot.thru===0 ? 'even' : (r.tot.diff<0?'under':'even');
+    const medal = (r.tot.thru>0 && i<3) ? medals[i] : '';
+    const expanded = !!expandedLbRows[r.t.id];
+    const row = `<div class="lb-row">
+      <div class="lb-pos">${medal || (i+1)}</div>
+      <div class="lb-name" style="min-width:0;padding-left:6px;">
+        ${playerNameLines(r.t.players)}
+      </div>
+      <div class="lb-thru"><div class="score-box">${r.tot.thru>0 ? r.tot.thru : '—'}</div></div>
+      <div class="lb-score"><div class="score-box ${cls}">${fmtDiff(r.tot.diff, r.tot.thru)}</div></div>
+      <button class="lb-expand-toggle" data-toggle-lb-row="${r.t.id}">${expanded ? '−' : '+'}</button>
+    </div>`;
+    return row + (expanded ? renderLbExpandedRow(r.t) : '');
+  }).join('');
+  let boardHtml;
+  if(rows.length===0){
+    boardHtml = `<div class="sign-frame">
+      <div class="board">
+        <div class="sign-post left"><div class="sign-cap"></div></div>
+        <div class="sign-post right"><div class="sign-cap"></div></div>
+        <div class="sign-beam"><div class="sign-beam-gold-strip"></div></div>
+        <div class="sign-pole"></div>
+        <div class="sign-ground-shadow"></div>
+        <div class="board-title">The Joey<span class="board-title-year">2026</span></div>
+        <div class="empty" style="padding:14px 4px 20px;">No teams yet — set up team pairings from the Scorecard tab to get things rolling.</div>
+      </div>
+    </div>`;
+  } else {
+    boardHtml = `<div class="sign-frame">
+      <div class="board">
+        <div class="sign-post left"><div class="sign-cap"></div></div>
+        <div class="sign-post right"><div class="sign-cap"></div></div>
+        <div class="sign-beam"><div class="sign-beam-gold-strip"></div></div>
+        <div class="sign-pole"></div>
+        <div class="sign-ground-shadow"></div>
+        <div class="board-title">The Joey<span class="board-title-year">2026</span></div>
+        <div class="board-head">
+          <span class="bh-pos"></span>
+          <span class="bh-team">Team</span>
+          <span class="bh-thru">Thru</span>
+          <span class="bh-score">Total</span>
+          <span class="bh-expand"></span>
+        </div>
+        ${rowsHtml}
+      </div>
+    </div>`;
+  }
+  const contestHtml = renderContestSummary();
+  return `
+    <div class="lb-scene">${boardHtml}</div>
+    ${contestHtml}
+  `;
+}
+
+function renderLbExpandedRow(t){
+  const s = scores[t.id] || {};
+  const cells = holesConfig.map(h=>{
+    const val = s[h.number] || '';
+    const cls = scoreClass(s[h.number], h.par);
+    return `<div style="flex:0 0 auto;width:32px;text-align:center;">
+      <div style="font-size:9.5px;font-weight:700;color:var(--ink-soft);margin-bottom:3px;">${h.number}</div>
+      <div class="score-input-readonly ${cls}" style="width:28px;height:28px;margin:0 auto;font-size:11.5px;">${val}</div>
+    </div>`;
+  }).join('');
+  return `<div class="lb-expand-strip">
+    <div class="lb-expand-scroll" style="display:flex;gap:5px;padding:10px 8px;overflow-x:auto;-webkit-overflow-scrolling:touch;">
+      ${cells}
+    </div>
+  </div>`;
+}
+const GOLDEN_PUTTER_ICON_SVG = `<svg viewBox="0 0 100 100" width="1em" height="1em" style="display:block;">
+  <path d="M56 6 L60 6 L46 78 L42 78 Z" fill="#D4A017"/>
+  <rect x="24" y="76" width="34" height="9" rx="2" fill="#D4A017"/>
+  <line x1="58" y1="6" x2="54.5" y2="24" stroke="#D4A017" stroke-width="9" stroke-linecap="round"/>
+</svg>`;
+
+function contestRowIcon(name){
+  const n = (name||'').toLowerCase();
+  if(n.includes('baffler')) return '🐍';
+  if(n.includes('longest drive')) return '💪';
+  if(n.includes('golden boy')) return `<span style="display:inline-block;width:16px;">${GOLDEN_PUTTER_ICON_SVG}</span>`;
+  return null; // fall back to caller's default
+}
+
+function renderContestSummary(){
+  const canSetWinners = isAdminSession || (myRole==='player' && !contestsLocked);
+
+  function winnerCell(winner, actionAttr){
+    if(winner){
+      return canSetWinners
+        ? `<button class="contest-winner-pill" ${actionAttr}>${escapeHtml(winner)}</button>`
+        : `<span class="contest-winner-pill static">${escapeHtml(winner)}</span>`;
+    }
+    return canSetWinners
+      ? `<button class="btn small gold" ${actionAttr} style="padding:5px 16px;font-size:12px;">Assign</button>`
+      : '';
+  }
+
+  const holeContests = holesConfig
+    .filter(h=>h.contestName || h.contestType)
+    .map(h=>{
+      const c = contests[h.number];
+      const label = h.contestName || (h.contestType==='ctp' ? 'Closest to the Pin' : 'Longest Drive');
+      return `<div class="contest-row">
+        <div class="contest-row-icon">${contestRowIcon(label) || '🚩'}</div>
+        <div class="contest-row-info">
+          <div class="contest-row-name">${escapeHtml(label)}</div>
+          <div class="contest-row-sub">Hole ${h.number}</div>
+        </div>
+        ${winnerCell(c && c.winner, `data-set-contest="${h.number}"`)}
+      </div>`;
+    }).join('');
+
+  const extraHtml = extraContests.map(ec=>{
+    const adminMenu = isAdminSession ? `
+      <span style="position:relative;">
+        <button class="tiny-btn" data-toggle-extra-menu="${ec.id}" style="font-size:11px;">⋯</button>
+        <div class="extra-contest-menu" id="extraMenu-${ec.id}" style="display:none;position:absolute;right:0;top:22px;z-index:20;background:var(--card-bg,#fff);border:1px solid var(--line,#ddd);border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.15);min-width:150px;overflow:hidden;">
+          <button data-edit-extra-contest="${ec.id}" style="display:block;width:100%;text-align:left;padding:9px 12px;font-size:13px;background:none;border:none;">✏️ Edit name</button>
+          <button data-remove-extra-contest="${ec.id}" style="display:block;width:100%;text-align:left;padding:9px 12px;font-size:13px;color:var(--flag,#c0392b);background:none;border:none;border-top:1px solid var(--line,#eee);">🗑 Delete</button>
+        </div>
+      </span>` : '';
+    return `<div class="contest-row" style="position:relative;">
+      <div class="contest-row-icon">${contestRowIcon(ec.name) || '📍'}</div>
+      <div class="contest-row-info">
+        <div class="contest-row-name">${escapeHtml(ec.name)}</div>
+        ${ec.location ? `<div class="contest-row-sub">${escapeHtml(ec.location)}</div>` : ''}
+      </div>
+      <span style="display:flex;align-items:center;gap:8px;flex-shrink:0;white-space:nowrap;">
+        ${winnerCell(ec.winner, `data-set-extra-contest="${ec.id}"`)}
+        ${adminMenu}
+      </span>
+    </div>`;
+  }).join('');
+
+  const lockToggleHtml = isAdminSession ? `
+    <button class="tiny-btn" id="toggleContestLockBtn" style="margin-top:10px;display:block;">
+      ${contestsLocked ? '🔒 Winners locked — tap to allow player edits' : '🔓 Players can set winners — tap to lock'}
+    </button>` : '';
+
+  return `<div class="card" style="padding:0;overflow:hidden;">
+    <div class="contest-card-header">Side Contests</div>
+    <div style="padding:14px 16px 16px;">
+    <div>
+    ${holeContests}
+    ${extraHtml}
+    </div>
+    ${isAdminSession ? `<button class="tiny-btn" id="addExtraContestBtn" style="margin-top:10px;">+ Add side contest</button>` : ''}
+    ${lockToggleHtml}
+    </div>
+  </div>`;
+}
+
+/* ---------------------------------------------------------
+   SCORECARD
+--------------------------------------------------------- */
+function renderScorecard(){
+  if(!isAdminSession){
+    // players/guests get a locked-down, single-purpose scorecard --
+    // no team switching, no group filter, no access to team setup
+    return renderScoreEntry();
+  }
+  const content = scorecardMode==='manage' ? renderTeamManager() : renderScoreEntry();
+  const modeSwitch = `
+    <div class="card">
+      <div class="section-desc" style="margin-bottom:8px;">Switch to team &amp; group setup:</div>
+      <div class="mode-switch">
+        <button data-mode="score" class="${scorecardMode==='score'?'active':''}">Score Entry</button>
+        <button data-mode="manage" class="${scorecardMode==='manage'?'active':''}">Teams &amp; Groups</button>
+      </div>
+    </div>`;
+  return content + modeSwitch;
+}
+
+function renderScoreEntry(){
+  if(teams.length===0){
+    return `<div class="card"><div class="empty">No teams set up yet. Switch to "Teams &amp; Groups" above to pair up your players.</div></div>`;
+  }
+  if(!isAdminSession && myRole!=='player'){
+    return `<div class="card"><div class="empty">Score entry is for players on a team. Check the Leaderboard tab for live scores from everyone.</div></div>`;
+  }
+  if(!isAdminSession && myRole==='player' && myTeamId){
+    scoreboardSelectedTeam = myTeamId;
+  } else if(!scoreboardSelectedTeam || !teams.find(t=>t.id===scoreboardSelectedTeam)){
+    scoreboardSelectedTeam = teams[0].id;
+  }
+  const groupChips = ['<button class="group-chip '+(scoreboardGroupFilter==='all'?'active':'')+'" data-group-filter="all">All groups</button>']
+    .concat(groups.map(g=>`<button class="group-chip ${scoreboardGroupFilter===g.id?'active':''}" data-group-filter="${g.id}">${escapeHtml(g.label)}</button>`)).join('');
+
+  const visibleTeams = scoreboardGroupFilter==='all' ? teams : teams.filter(t=>t.groupId===scoreboardGroupFilter);
+  const teamChips = visibleTeams.map(t=>`
+    <button class="team-chip ${t.id===scoreboardSelectedTeam?'active':''}" data-select-team="${t.id}">
+      <span class="team-badge">${escapeHtml(t.label)}</span>
+      <span class="team-chip-name">${escapeHtml((t.players||[]).join(' / '))}</span>
+    </button>`).join('');
+
+  const team = teams.find(t=>t.id===scoreboardSelectedTeam);
+  const canEditTeam = isAdminSession || (myRole==='player' && myTeamId===team?.id);
+  const isYourTeamView = myRole==='player' && team && canEditTeam;
+  let gridHtml = '';
+  if(team){
+    const s = scores[team.id] || {};
+    let currentHole = holesConfig.find(h=>!s[h.number]) || holesConfig[holesConfig.length-1];
+    if(quickUndoState && quickUndoState.teamId === team.id){
+      const heldHole = holesConfig.find(h=>h.number===quickUndoState.hole);
+      if(heldHole) currentHole = heldHole;
+    }
+    window.__scorecardCurrentHole = currentHole.number;
+    const nineGrid = (start,end,label,outLabel)=>{
+      const holesSlice = holesConfig.slice(start,end);
+      const hlCls = (h)=> h.number===currentHole.number ? ' current-hole-col' : '';
+      const headCells = holesSlice.map(h=>`<th class="${h.number===currentHole.number?'current-hole-col':''}">${h.number}${(h.contestName||h.contestType)?'<span class="contest-asterisk">*</span>':''}</th>`).join('');
+      const yardCells = holesSlice.map(h=>`<td class="${hlCls(h)}">${h.yards}</td>`).join('');
+      const hcpCells = holesSlice.map(h=>`<td class="${hlCls(h)}">${h.handicap!==undefined?h.handicap:'—'}</td>`).join('');
+      const parCells = holesSlice.map(h=>`<td class="${hlCls(h)}">${h.par}</td>`).join('');
+      const reviewCells = holesSlice.map(h=>`<td class="${hlCls(h)}"><button class="hole-preview-btn" data-review-hole="${h.number}" title="Preview hole ${h.number}"><span class="hpb-icon">${HOLE_PREVIEW_ICON_SVG}</span></button></td>`).join('');
+      const scoreCells = holesSlice.map(h=>{
+        const val = s[h.number] || '';
+        const cls = scoreClass(s[h.number], h.par);
+        const hl = hlCls(h);
+        if(canEditTeam){
+          return `<td class="${hl}"><div class="score-input-wrap" style="width:40px;height:40px;margin:0 auto;">
+            <input class="score-input ${cls}" style="font-size:16px;" type="number" min="1" max="15" inputmode="numeric"
+              value="${val}" data-hole="${h.number}" data-team="${team.id}"></div></td>`;
+        }
+        return `<td class="${hl}"><div class="score-input-wrap" style="width:40px;height:40px;margin:0 auto;"><div class="score-input-readonly ${cls}" style="font-size:16px;">${val}</div></div></td>`;
+      }).join('');
+      const yardSum = holesSlice.reduce((a,h)=>a+h.yards,0);
+      const parSum = holesSlice.reduce((a,h)=>a+h.par,0);
+      let scoreSum = 0, scoreCount = 0;
+      holesSlice.forEach(h=>{ if(s[h.number]){ scoreSum += s[h.number]; scoreCount++; } });
+      const scoreSumDisplay = scoreCount>0 ? scoreSum : '—';
+
+      return `<div class="pcard-wrap">
+        <div class="pcard-nine-label">${label}</div>
+        <div class="pcard-scroll" data-nine="${label==='Front Nine'?'front':'back'}">
+        <table class="pcard-table">
+          <colgroup>
+            <col class="pcard-label-col">
+            ${holesSlice.map(()=>'<col class="pcard-hole-col">').join('')}
+            <col class="pcard-out-col">
+          </colgroup>
+          <thead>
+            <tr class="pcard-hole">
+              <th class="pcard-label">Hole</th>
+              ${headCells}
+              <th>${outLabel}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="pcard-yards">
+              <td class="pcard-label">YDS</td>
+              ${yardCells}
+              <td class="pcard-sum">${yardSum}</td>
+            </tr>
+            <tr class="pcard-par">
+              <td class="pcard-label">Par</td>
+              ${parCells}
+              <td class="pcard-sum">${parSum}</td>
+            </tr>
+            <tr class="pcard-score">
+              <td class="pcard-label"><span class="pcard-team-badge">${escapeHtml(team.label)}</span></td>
+              ${scoreCells}
+              <td class="pcard-sum">${scoreSumDisplay}</td>
+            </tr>
+            <tr class="pcard-hcp">
+              <td class="pcard-label">Hcp</td>
+              ${hcpCells}
+              <td></td>
+            </tr>
+            <tr class="pcard-review">
+              <td class="pcard-label" style="font-size:10px;">Hole Preview</td>
+              ${reviewCells}
+              <td></td>
+            </tr>
+          </tbody>
+        </table>
+        </div>
+      </div>`;
+    };
+    const t = teamTotals(team.id);
+    gridHtml = `
+      ${nineGrid(0,9,'Front Nine','Out')}
+      ${nineGrid(9,18,'Back Nine','In')}
+      <div class="score-legend">
+        <span><i class="legend-swatch circle" style="color:var(--flag);"></i>Birdie</span>
+        <span><i class="legend-swatch circle" style="color:var(--flag);box-shadow:0 0 0 2px #fff inset,0 0 0 3px var(--flag) inset;"></i>Eagle</span>
+        <span><i class="legend-swatch" style="color:var(--water);"></i>Bogey</span>
+        <span><i class="legend-swatch" style="color:var(--water);box-shadow:0 0 0 2px #fff inset,0 0 0 3px var(--water) inset;"></i>Double+</span>
+        <span><span style="color:var(--gold);font-weight:800;">*</span> Side Contest hole</span>
+      </div>
+      <div class="row-between" style="margin-top:16px;border-top:1px solid var(--line);padding-top:12px;">
+        <span style="font-size:13px;color:var(--ink-soft);">Thru ${t.thru} · ${t.strokes || 0} strokes</span>
+        <span class="mono" style="font-weight:700;font-size:16px;color:${t.diff<0?'var(--flag)':'var(--ink)'};">${fmtDiff(t.diff,t.thru)}</span>
+      </div>
+    `;
+  } else {
+    gridHtml = `<div class="card"><div class="empty">Select a team below to enter scores.</div></div>`;
+  }
+
+  let teamSummaryHtml = '', currentHoleSummaryHtml = '', quickEntryHtml = '';
+  if(isYourTeamView){
+    const t = teamTotals(team.id);
+    teamSummaryHtml = `
+      <div class="your-team-card">
+        <div class="your-team-badge-wrap">
+          <div class="your-team-badge-label">Team</div>
+          <div class="your-team-badge">${escapeHtml(team.label)}</div>
+        </div>
+        <div class="your-team-info">
+          ${playerNameLines(team.players)}
+        </div>
+        <div class="your-team-stats">
+          <div class="your-team-score" style="color:${t.diff<0?'var(--gold-light)':'#fff'};">${fmtDiff(t.diff,t.thru)}</div>
+          <div class="your-team-thru">Thru ${t.thru}</div>
+        </div>
+      </div>`;
+
+    const s = scores[team.id] || {};
+    let currentHole = holesConfig.find(h=>!s[h.number]) || holesConfig[holesConfig.length-1];
+    if(quickUndoState && quickUndoState.teamId === team.id){
+      const heldHole = holesConfig.find(h=>h.number===quickUndoState.hole);
+      if(heldHole) currentHole = heldHole;
+    }
+    const currentHoleContestLabel = currentHole.contestName || (currentHole.contestType==='ctp' ? 'Closest to the Pin' : currentHole.contestType==='longdrive' ? 'Longest Drive' : null);
+    currentHoleSummaryHtml = `
+      <div class="current-hole-card">
+        <div class="current-hole-card-top">
+          <div>
+            <div class="current-hole-title">Current Hole: #${currentHole.number}</div>
+            <div class="current-hole-par-row">Par ${currentHole.par}</div>
+            <div class="current-hole-meta">${currentHole.yards} yds · Hcp ${currentHole.handicap!==undefined?currentHole.handicap:'—'}</div>
+          </div>
+          <button class="hole-preview-cta" data-review-hole="${currentHole.number}">
+            <span class="hole-preview-cta-icon">${HOLE_PREVIEW_ICON_SVG}</span>
+            <span>Preview</span>
+          </button>
+        </div>
+        ${currentHoleContestLabel ? `<div class="current-hole-contest">
+          <span class="current-hole-contest-icon">${contestRowIcon(currentHoleContestLabel) || '🏆'}</span>
+          <span>${escapeHtml(currentHoleContestLabel)}</span>
+        </div>` : ''}
+      </div>`;
+
+    const existingVal = s[currentHole.number];
+    if(!pendingQuickEntry || pendingQuickEntry.hole !== currentHole.number){
+      pendingQuickEntry = {hole: currentHole.number, val: existingVal || null};
+    }
+    const minBtn = currentHole.par===3 ? Math.max(1, currentHole.par - 3) : 2;
+    const maxBtn = currentHole.par===3 ? currentHole.par + 3 : 8;
+    const isUndoActive = !!(quickUndoState && quickUndoState.hole===currentHole.number && quickUndoState.teamId===team.id);
+    const quickBtns = [];
+    for(let v=minBtn; v<=maxBtn; v++){
+      const isSelected = pendingQuickEntry.val === v;
+      const isPar = v === currentHole.par;
+      const label = quickScoreLabel(v, currentHole.par);
+      quickBtns.push(`<div class="quick-score-col" data-quick-score="${v}" data-quick-hole="${currentHole.number}" data-quick-team="${team.id}">
+        <div class="quick-score-btn ${isSelected?'selected':''} ${isPar?'is-par':''}">
+          <span class="quick-score-num">${v}</span>
+        </div>
+        <div class="quick-score-label ${(label==='Snowman'||label==='Albatross')?'is-compact':''}">${label}</div>
+      </div>`);
+    }
+    const confirmVal = isUndoActive ? existingVal : null;
+    const confirmLabel = confirmVal ? quickScoreLabel(confirmVal, currentHole.par) : '';
+    quickEntryHtml = `
+      <div class="card" style="padding:8px 12px;margin-bottom:10px;background:#CED6C2;">
+        <div class="section-title" style="font-size:19.125px;font-weight:700;margin-bottom:1px;">Quick Score Entry</div>
+        <div class="section-desc" style="margin-bottom:0;color:var(--ink);"><strong>Hole #${currentHole.number}</strong> · Tap your score or input below</div>
+        <div class="quick-score-row" style="margin-top:6px;">
+          ${quickBtns.join('')}
+        </div>
+        ${isUndoActive ? `<button class="quick-score-confirm" data-quick-save-hole="${currentHole.number}" data-quick-save-team="${team.id}">
+          <span class="quick-score-confirm-check">✓</span>
+          <span class="quick-score-confirm-text">${confirmLabel} (${confirmVal}) selected for Hole #${currentHole.number}</span>
+          <span class="quick-score-confirm-clear">✕ Clear</span>
+        </button>` : ''}
+      </div>`;
+  }
+
+  return `
+    ${teamSummaryHtml}
+    ${currentHoleSummaryHtml}
+    ${quickEntryHtml}
+    ${(team && !canEditTeam) ? `<div class="card section-desc" style="background:var(--parchment);padding:8px 10px;margin-bottom:10px;font-size:12.5px;">👁 Viewing Team ${escapeHtml(team.label)} — ${myRole==='player' ? "you can only edit your own team's scores." : 'read-only.'}</div>` : ''}
+    ${gridHtml}
+    ${isAdminSession ? `
+    <div class="card" style="margin-top:14px;padding-top:14px;">
+      <div style="font-size:11px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.03em;margin-bottom:8px;">Switch team</div>
+      ${groups.length>0 ? `<div class="group-filter">${groupChips}</div>` : ''}
+      <div class="player-select">${teamChips}</div>
+    </div>` : ''}
+  `;
+}
+
+function renderTeamManager(){
+  const groupBlocks = groups.map(g=>{
+    const gt = teamsInGroup(g.id);
+    const teamRows = gt.map(t=>`
+      <div class="team-row">
+        <span class="team-badge">${escapeHtml(t.label)}</span>
+        <div class="team-row-info">
+          <div class="team-row-players">${escapeHtml((t.players||[]).join(' · '))}</div>
+        </div>
+        <div class="team-row-actions">
+          <button class="tiny-btn" data-edit-team="${t.id}">Edit</button>
+          <button class="tiny-btn" data-remove-team="${t.id}">Remove</button>
+        </div>
+      </div>`).join('') || `<div class="empty" style="padding:8px 0;">No teams in this group yet.</div>`;
+    return `<div class="group-block">
+      <div class="group-block-head">
+        <div>
+          <div class="group-block-title">${escapeHtml(g.label)}</div>
+          ${g.teeTime ? `<div class="group-block-time">${escapeHtml(g.teeTime)}</div>` : ''}
+        </div>
+        <div style="display:flex;gap:10px;">
+          <button class="tiny-btn" data-edit-group="${g.id}">Edit</button>
+          <button class="tiny-btn" data-remove-group="${g.id}">Remove</button>
+        </div>
+      </div>
+      ${teamRows}
+      <button class="btn secondary small" style="margin-top:10px;" data-add-team-to="${g.id}">+ Add team</button>
+    </div>`;
+  }).join('');
+
+  const un = unassignedTeams();
+  const unassignedHtml = un.length ? `
+    <div class="group-block" style="border-style:dashed;">
+      <div class="group-block-head"><div class="group-block-title">Unassigned teams</div></div>
+      ${un.map(t=>`
+        <div class="team-row">
+          <span class="team-badge">${escapeHtml(t.label)}</span>
+          <div class="team-row-info">
+            <div class="team-row-players">${escapeHtml((t.players||[]).join(' · '))}</div>
+          </div>
+          <div class="team-row-actions">
+            <button class="tiny-btn" data-edit-team="${t.id}">Edit</button>
+            <button class="tiny-btn" data-remove-team="${t.id}">Remove</button>
+          </div>
+        </div>`).join('')}
+    </div>` : '';
+
+  return `
+    <div class="card">
+      <div class="section-title" style="font-size:16px;">Groups &amp; Tee Times</div>
+      <div class="section-desc">Each group plays together at one tee time and can hold multiple teams.</div>
+      ${groupBlocks}
+      ${unassignedHtml}
+      <button class="btn block" id="addGroupBtn" style="margin-top:4px;">+ Add group</button>
+      <button class="btn secondary block" id="addUnassignedTeamBtn" style="margin-top:8px;">+ Add team (no group yet)</button>
+    </div>
+  `;
+}
+
+/* ---------------------------------------------------------
+   HOLES
+--------------------------------------------------------- */
+function renderHoles(idxOverride){
+  const isPreview = idxOverride!=null;
+  const idx = isPreview ? idxOverride : currentHoleIndex;
+  const slideClass = (!isPreview && holeSlideDir) ? (holeSlideDir==='left'?'slide-left':'slide-right') : '';
+  if(!isPreview) holeSlideDir = null;
+  const h = holesConfig[idx];
+  const contest = contests[h.number] || {};
+  const contestLabel = h.contestName || (h.contestType==='ctp' ? 'Closest to the Pin' : h.contestType==='longdrive' ? 'Longest Drive' : null);
+  let contestHtml = '';
+  if(contestLabel){
+    contestHtml = `<div class="contest-badge">
+      <div class="icon">${contestRowIcon(contestLabel) || '🏆'}</div>
+      <div style="flex:1;">
+        <div class="label">${escapeHtml(contestLabel)}</div>
+        <div class="winner">${contest.winner ? escapeHtml(contest.winner) + (contest.distance?` · ${escapeHtml(contest.distance)}`:'') : 'No winner set yet'}</div>
+      </div>
+      ${(isAdminSession || (myRole==='player' && !contestsLocked)) ? `<button class="btn small gold" data-set-contest="${h.number}">Set</button>` : ''}
+    </div>`;
+  }
+
+  const dots = holesConfig.map((hh,i)=>{
+    const hasContest = hh.contestName || hh.contestType;
+    return `<div class="hole-dot ${i===idx?'current':(hasContest?'contest':'')}" data-goto-hole="${i}"></div>`;
+  }).join('');
+
+  const reticleOverlayHtml = renderReticleOverlay(h);
+  const calibratingThisHole = calibrationMode && calibrationMode.holeNumber === h.number;
+  let calibHint = '';
+  let calibButtons = '';
+  if(calibratingThisHole){
+    if(calibrationMode.step === 'tee'){
+      calibHint = `<div class="hazard-hint" style="font-weight:700;color:var(--fairway);">📍 Step 1 of 3 — Tap the TEE on the photo</div>`;
+    } else if(calibrationMode.step === 'green'){
+      calibHint = `<div class="hazard-hint" style="font-weight:700;color:var(--fairway);">🚩 Step 2 of 3 — Tap the GREEN on the photo</div>`;
+    } else {
+      calibHint = `<div class="hazard-hint" style="font-weight:700;color:var(--fairway);">🎯 Step 3 of 3 — Set the default markers (max 5): Long press to Drag &amp; Move. Press (×) to delete or tap to add target.</div>`;
+      calibButtons = `<div style="display:flex;gap:8px;justify-content:center;margin:-6px 0 12px;">
+        <button class="btn small gold" id="calibDoneBtn">Save defaults</button>
+        <button class="tiny-btn" id="calibCancelBtn">Cancel</button>
+      </div>`;
+    }
+  } else {
+    calibHint = h.calib
+      ? `<div class="hazard-hint">Long press to Drag &amp; Move. Press (×) to delete or tap to add target.</div>`
+      : (isAdminSession ? `<div class="hazard-hint">Calibrate this hole to enable live yardage markers</div>` : '');
+  }
+
+  return `
+    <div class="card ${slideClass}" id="holeCard">
+      <div class="hole-nav">
+        <button class="hole-nav-btn" id="prevHole">‹</button>
+        <div style="text-align:center;">
+          <div class="hole-title-big display">Hole ${h.number}</div>
+        </div>
+        <button class="hole-nav-btn" id="nextHole">›</button>
+      </div>
+      <div class="hole-meta" style="justify-content:center;">
+        <div style="text-align:center;">Par<b>${h.par}</b></div>
+        <div style="text-align:center;">Yards<b>${h.yards}</b></div>
+        <div style="text-align:center;">Handicap<b>${h.handicap!==undefined?h.handicap:'—'}</b></div>
+        ${contestLabel ? `<div style="text-align:center;">Contest<b style="font-size:18px;">${contestRowIcon(contestLabel) || '🏆'}</b></div>` : ''}
+      </div>
+      <div class="hole-svg-wrap hole-photo-frame" id="holePhotoFrame" data-hole-frame="${h.number}">
+        ${h.photo ? `<img src="${h.photo}" style="width:100%;display:block;pointer-events:none;border-radius:10px;">` : holeSvg(h)}
+        <div id="reticleOverlayWrap">${reticleOverlayHtml}</div>
+      </div>
+      ${calibHint}
+      ${calibButtons}
+      ${isAdminSession && !calibratingThisHole ? `<button class="tiny-btn" id="calibrateHoleBtn">${h.calib ? 'Re-calibrate hole' : '📍 Calibrate hole'}</button>` : ''}
+      ${isAdminSession ? (!h.photo ? `<label class="tiny-btn" style="cursor:pointer;">Add a photo for this hole<input type="file" accept="image/*" class="hole-photo-input" data-hole-photo="${h.number}" style="display:none;"></label>` : `<label class="tiny-btn" style="cursor:pointer;">Replace photo<input type="file" accept="image/*" class="hole-photo-input" data-hole-photo="${h.number}" style="display:none;"></label>`) : ''}
+      ${contestHtml}
+      <div class="hole-desc" id="holeDescText" data-editable="desc">${escapeHtml(h.description)}</div>
+      ${isAdminSession ? `<button class="tiny-btn" id="editHoleBtn">Edit hole details</button>` : ''}
+      <div class="hole-dots">${dots}</div>
+    </div>
+  `;
+}
+
+/* ---------------------------------------------------------
+   FEED
+--------------------------------------------------------- */
+const FEED_TAGS = ['LongDrive','ClosestToPin','WaterHazard','Birdie','GreatShot','Scenic','TeamPhoto','Trouble'];
+let pendingFeedTags = [];
+let feedFilterTag = 'all';
+let expandedComments = {}; // { postId: true } -- which posts have their reply thread open
+let expandedLbRows = {};   // { teamId: true } -- which leaderboard rows show the hole-by-hole strip
+let editingPostId = null;   // post currently being edited (text only), or null
+let editingCommentId = null; // comment currently being edited, or null
+let pendingQuickEntry = null; // {hole, val} -- Quick Score Entry selection not yet saved
+let quickUndoState = null;    // {hole, teamId, previousVal, timeoutId} -- 4s Undo grace period after a quick-tap save
+
+function renderFeed(){
+  const composer = `
+    <div class="card">
+      <div class="section-title" style="font-size:16px;">Share something</div>
+      <div class="composer" style="margin-top:8px;">
+        <textarea id="feedText" placeholder="How's the round going?"></textarea>
+        <div class="composer-row">
+          <button type="button" class="file-btn" id="feedMediaBtn">📷 Add photo/video</button>
+          <input type="file" accept="image/*" capture="environment" id="feedPhotoCaptureInput" style="display:none;">
+          <input type="file" accept="video/*" capture="environment" id="feedVideoCaptureInput" style="display:none;">
+          <input type="file" accept="image/*,video/*" id="feedUploadInput" style="display:none;">
+          <button class="btn" id="feedPostBtn">Post</button>
+        </div>
+        <div id="feedImgPreviewWrap"></div>
+      </div>
+    </div>`;
+
+  const usedTags = [...new Set(feedPosts.flatMap(p=>p.tags||[]))];
+  let filterHtml = '';
+  if(usedTags.length){
+    const filterChips = ['all', ...usedTags].map(t=>{
+      const label = t==='all' ? 'All posts' : '#'+t;
+      return `<button class="tag-chip filter ${feedFilterTag===t?'active':''}" data-filter-tag="${t}">${label}</button>`;
+    }).join('');
+    filterHtml = `<div class="card" style="padding:10px 12px;">
+      <div style="font-size:10.5px;color:var(--ink-soft);font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">🎬 Highlight Reel</div>
+      <div class="tag-row" style="margin:0;">${filterChips}</div>
+    </div>`;
+  }
+
+  const visiblePosts = feedFilterTag==='all' ? feedPosts : feedPosts.filter(p=>(p.tags||[]).includes(feedFilterTag));
+  const posts = visiblePosts.length===0
+    ? `<div class="card"><div class="empty">${feedFilterTag==='all' ? 'No posts yet. Be the first to share a shot of the day.' : `No posts tagged #${feedFilterTag} yet.`}</div></div>`
+    : `<div class="card">${visiblePosts.slice().reverse().map(renderPost).join('')}</div>`;
+  return composer + filterHtml + posts;
+}
+function renderPost(post){
+  const heartIcon = post.likedByMe
+    ? `<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" stroke="currentColor" stroke-width="1.8" style="vertical-align:-3px;"><path d="M12 21s-7-4.5-9.5-9A5.5 5.5 0 0 1 12 6a5.5 5.5 0 0 1 9.5 6c-2.5 4.5-9.5 9-9.5 9z"/></svg>`
+    : `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" style="vertical-align:-3px;"><path d="M12 21s-7-4.5-9.5-9A5.5 5.5 0 0 1 12 6a5.5 5.5 0 0 1 9.5 6c-2.5 4.5-9.5 9-9.5 9z"/></svg>`;
+  const tagsHtml = (post.tags&&post.tags.length) ? `<div class="post-tags">${post.tags.map(t=>`<span class="post-tag">#${escapeHtml(t)}</span>`).join('')}</div>` : '';
+  const comments = post.comments || [];
+  const expanded = !!expandedComments[post.id];
+  const canManagePost = isAdminSession || post.name === myName;
+  const isEditingPost = editingPostId === post.id;
+
+  const commentRows = comments.map(c=>{
+    const canManageComment = isAdminSession || c.name === myName;
+    if(editingCommentId === c.id){
+      return `<div class="comment-row">
+        <div class="comment-edit-box">
+          <input type="text" class="comment-edit-input" value="${escapeHtml(c.text)}" maxlength="300">
+          <button class="comment-send" data-save-comment="${c.id}" data-comment-post="${post.id}">Save</button>
+          <button class="comment-send" data-cancel-comment-edit="1">Cancel</button>
+        </div>
+      </div>`;
+    }
+    return `<div class="comment-row">
+      <span class="comment-name">${escapeHtml(c.name)}</span>
+      <span class="comment-text">${escapeHtml(c.text)}</span>
+      ${canManageComment ? `<span class="comment-manage">
+        <button class="comment-manage-btn" data-edit-comment-btn="${c.id}">Edit</button>
+        <button class="comment-manage-btn danger" data-delete-comment="${c.id}" data-comment-post="${post.id}">Delete</button>
+      </span>` : ''}
+    </div>`;
+  }).join('');
+
+  const commentsSection = expanded ? `
+    <div class="comments-section">
+      ${commentRows || `<div class="comments-empty">No replies yet.</div>`}
+      <div class="comment-compose">
+        <input type="text" class="comment-input" data-comment-post="${post.id}" placeholder="Write a reply..." maxlength="300">
+        <button class="comment-send" data-comment-send="${post.id}">Send</button>
+      </div>
+    </div>` : '';
+
+  const textBlock = isEditingPost
+    ? `<div class="post-edit-box">
+        <textarea class="post-edit-input" maxlength="500">${escapeHtml(post.text||'')}</textarea>
+        <div class="post-edit-actions">
+          <button class="tiny-btn" data-save-post="${post.id}">Save</button>
+          <button class="tiny-btn" data-cancel-post-edit="1">Cancel</button>
+        </div>
+      </div>`
+    : (post.text ? `<div class="post-text">${escapeHtml(post.text)}</div>` : '');
+
+  const manageHtml = (canManagePost && !isEditingPost) ? `
+    <button class="post-manage-btn" data-edit-post-btn="${post.id}">Edit</button>
+    <button class="post-manage-btn danger" data-delete-post="${post.id}">Delete</button>` : '';
+
+  return `
+    <div class="post">
+      <div class="post-head">
+        <div class="avatar">${initials(post.name)}</div>
+        <div>
+          <div class="post-name">${escapeHtml(post.name)}</div>
+          <div class="post-time">${timeAgo(post.time)}</div>
+        </div>
+      </div>
+      ${textBlock}
+      ${post.video ? `<video class="post-img" src="${post.video}" controls playsinline></video>` : (post.img ? `<img class="post-img" src="${post.img}" data-lightbox="${post.img}">` : '')}
+      ${tagsHtml}
+      <div class="post-actions">
+        <button class="post-like ${post.likedByMe?'liked':''}" data-like="${post.id}">${heartIcon} ${post.likes||0}</button>
+        <button class="post-comment-toggle" data-toggle-comments="${post.id}">💬 ${comments.length || ''} ${comments.length===1?'Reply':'Replies'}</button>
+        ${manageHtml}
+      </div>
+      ${commentsSection}
+    </div>`;
+}
+
+/* ---------------------------------------------------------
+   JOE / MEMORIAL
+--------------------------------------------------------- */
+function renderJoe(){
+  const photoHtml = memorialPhoto
+    ? `<img class="memorial-photo" src="${memorialPhoto}" data-lightbox="${memorialPhoto}">`
+    : isAdminSession
+      ? `<label class="memorial-photo" style="display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;cursor:pointer;">
+          Add a photo of Joe
+          <input type="file" accept="image/*" id="memPhotoInput" style="display:none;">
+         </label>`
+      : `<div class="memorial-photo" style="display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;">Remembering Joe</div>`;
+
+  const champRows = champions.length
+    ? champions.slice().sort((a,b)=>b.year-a.year).map(c=>`<div class="champ-row"><span class="champ-year mono">${escapeHtml(c.year)}</span><span>${escapeHtml(c.name)}</span></div>`).join('')
+    : `<div class="empty" style="padding:10px 0;">No champions recorded yet.</div>`;
+
+  const tributeHtml = tributePosts.length===0
+    ? `<div class="empty">No tributes yet — share a memory below.</div>`
+    : tributePosts.slice().reverse().map(renderPost).join('');
+
+  return `
+    <div class="card">
+      ${photoHtml}
+      ${(isAdminSession && memorialPhoto) ? `<button class="tiny-btn" id="changeMemPhoto">Change photo</button>` : ''}
+      <div class="section-title" style="margin-top:10px;">Remembering Joe</div>
+      <div class="memorial-bio" id="bioText">${escapeHtml(memorialBio).replace(/\n/g,'<br><br>')}</div>
+      ${isAdminSession ? `<button class="tiny-btn" id="editBioBtn" style="margin-top:8px;">Edit this page</button>` : ''}
+    </div>
+
+    <div class="card">
+      <div class="section-title" style="font-size:16px;">🏆 Champions</div>
+      <div class="section-desc">The names on the trophy, year by year.</div>
+      ${champRows}
+      ${isAdminSession ? `<button class="btn secondary small" id="addChampBtn" style="margin-top:10px;">+ Add champion</button>` : ''}
+    </div>
+
+    <div class="card">
+      <div class="section-title" style="font-size:16px;">Tribute Wall</div>
+      <div class="section-desc">Share a memory, a story, or just say hi to the group.</div>
+      <div class="composer">
+        <textarea id="tributeText" placeholder="Share a memory of Joe..."></textarea>
+        <div class="composer-row">
+          <button type="button" class="file-btn" id="tributeMediaBtn">📷 Add photo/video</button>
+          <input type="file" accept="image/*" capture="environment" id="tributePhotoCaptureInput" style="display:none;">
+          <input type="file" accept="video/*" capture="environment" id="tributeVideoCaptureInput" style="display:none;">
+          <input type="file" accept="image/*,video/*" id="tributeUploadInput" style="display:none;">
+          <button class="btn" id="tributePostBtn">Post</button>
+        </div>
+        <div id="tributeImgPreviewWrap"></div>
+      </div>
+      <div style="margin-top:12px;">${tributeHtml}</div>
+    </div>
+  `;
+}
+
+/* ---------------------------------------------------------
+   IMAGE HANDLING (resize to keep storage small)
+--------------------------------------------------------- */
+function resizeImage(file, maxW=900, quality=0.72){
+  return new Promise((resolve,reject)=>{
+    const reader = new FileReader();
+    reader.onload = (e)=>{
+      const img = new Image();
+      img.onload = ()=>{
+        const scale = Math.min(1, maxW/img.width);
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width*scale;
+        canvas.height = img.height*scale;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img,0,0,canvas.width,canvas.height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+/* ---------------------------------------------------------
+   UTIL
+--------------------------------------------------------- */
+/* ---------------------------------------------------------
+   HOLE RETICLES
+   Straight-line "as the crow flies" distances from a single
+   tee/green calibration point per hole. Default marker layout
+   is shared (part of hole setup); anything a player drags,
+   adds, or removes during play is personal and never saved --
+   it resets to the shared default the moment they leave the
+   hole or refresh.
+--------------------------------------------------------- */
+function fracDist(x1,y1,x2,y2){
+  return Math.sqrt(Math.pow(x2-x1,2) + Math.pow(y2-y1,2));
+}
+
+function yardsForSegment(h, x1,y1,x2,y2){
+  if(!h.calib) return 0;
+  const total = fracDist(h.calib.teeX,h.calib.teeY,h.calib.greenX,h.calib.greenY);
+  if(total===0) return 0;
+  const yardsPerFrac = h.yards / total;
+  return Math.round(fracDist(x1,y1,x2,y2) * yardsPerFrac);
+}
+
+function generateDefaultReticles(h){
+  // Used only as a starting-point SEED when an admin begins placing default
+  // markers during calibration -- not the final answer. The admin drags,
+  // adds, and removes from here to set the real default distances/angles.
+  if(!h.calib) return [];
+  if(h.par !== 4 && h.par !== 5) return [];
+  const yards = h.yards;
+  const GREEN_BUFFER = 12; // never seed a default marker this close to the green -- that's what the flag is for
+  const MIN_GAP = 15;      // never seed two markers closer together than this
+  const maxD = Math.max(0, yards - GREEN_BUFFER);
+  const distances = [];
+
+  const d1 = Math.min(220, maxD);
+  if(d1 > MIN_GAP) distances.push(d1);
+
+  if(distances.length){
+    const d2 = Math.min(d1 + 175, maxD);
+    if(d2 - d1 > MIN_GAP) distances.push(d2);
+
+    if(h.par===5 && distances.length===2){
+      const d3 = Math.min(d2 + 175, maxD);
+      if(d3 - d2 > MIN_GAP) distances.push(d3);
+    }
+  }
+
+  return distances.map(d=>{
+    const t = Math.max(0, Math.min(1, d / yards));
+    return {
+      x: h.calib.teeX + t * (h.calib.greenX - h.calib.teeX),
+      y: h.calib.teeY + t * (h.calib.greenY - h.calib.teeY)
+    };
+  });
+}
+
+// Returns the array that taps/drags/double-taps should read and write to:
+// the admin's in-progress default-layout during calibration, or the
+// player's own ephemeral session markers during normal play.
+function activeReticleArray(h){
+  if(calibrationMode && calibrationMode.holeNumber===h.number && calibrationMode.step==='reticles'){
+    return calibrationMode.reticles;
+  }
+  if(!sessionReticles[h.number]){
+    sessionReticles[h.number] = (h.reticles || []).map(r=>({x:r.x,y:r.y}));
+  }
+  return sessionReticles[h.number];
+}
+
+const TEE_ICON_SVG = `
+  <svg viewBox="0 0 28 28" width="26" height="26">
+    <line x1="14" y1="18" x2="14" y2="26" stroke="#B08D57" stroke-width="2.4" stroke-linecap="round"/>
+    <circle cx="14" cy="11" r="8.5" fill="#fff" stroke="#1B2E22" stroke-width="1.4"/>
+    <circle cx="11" cy="8" r="0.9" fill="#c9c9c9"/>
+    <circle cx="16" cy="9" r="0.9" fill="#c9c9c9"/>
+    <circle cx="13" cy="13" r="0.9" fill="#c9c9c9"/>
+    <circle cx="17" cy="13" r="0.9" fill="#c9c9c9"/>
+  </svg>`;
+
+const GREEN_ICON_SVG = `
+  <svg viewBox="0 0 28 28" width="27.6" height="27.6">
+    <line x1="6" y1="28" x2="6" y2="4" stroke="#3A3A3A" stroke-width="1.8" stroke-linecap="round"/>
+    <path d="M6 4 L22.1 8.6 L6 13.2 Z" fill="#FFD166" stroke="#B08D2E" stroke-width="0.8"/>
+  </svg>`;
+
+const CROSSHAIR_SIZE = 43;
+const CROSSHAIR_SVG = `
+  <svg viewBox="0 0 100 100" width="${CROSSHAIR_SIZE}" height="${CROSSHAIR_SIZE}">
+    <circle cx="50" cy="50" r="30" fill="none" stroke="#fff" stroke-width="3"/>
+    <line x1="50" y1="8" x2="50" y2="32" stroke="#fff" stroke-width="3" stroke-linecap="square"/>
+    <line x1="50" y1="68" x2="50" y2="92" stroke="#fff" stroke-width="3" stroke-linecap="square"/>
+    <line x1="8" y1="50" x2="32" y2="50" stroke="#fff" stroke-width="3" stroke-linecap="square"/>
+    <line x1="68" y1="50" x2="92" y2="50" stroke="#fff" stroke-width="3" stroke-linecap="square"/>
+    <line x1="50" y1="41" x2="50" y2="59" stroke="#fff" stroke-width="3" stroke-linecap="square"/>
+    <line x1="41" y1="50" x2="59" y2="50" stroke="#fff" stroke-width="3" stroke-linecap="square"/>
+  </svg>`;
+
+function renderReticleOverlay(h){
+  if(!h.calib) return '';
+  const rets = activeReticleArray(h);
+  const ordered = rets.map((r,i)=>({x:r.x, y:r.y, origIndex:i}))
+    .sort((a,b)=> fracDist(h.calib.teeX,h.calib.teeY,a.x,a.y) - fracDist(h.calib.teeX,h.calib.teeY,b.x,b.y));
+
+  const points = [{x:h.calib.teeX,y:h.calib.teeY}, ...ordered, {x:h.calib.greenX,y:h.calib.greenY}];
+
+  let lines = '', labels = '';
+  for(let i=0;i<points.length-1;i++){
+    const p1=points[i], p2=points[i+1];
+    lines += `<line x1="${p1.x*100}" y1="${p1.y*100}" x2="${p2.x*100}" y2="${p2.y*100}" stroke="white" stroke-width="0.32" opacity="0.9"/>`;
+    const labelX=(p1.x + (p2.x-p1.x)*0.67)*100, labelY=(p1.y + (p2.y-p1.y)*0.67)*100;
+    const yds = yardsForSegment(h,p1.x,p1.y,p2.x,p2.y);
+    labels += `<div class="reticle-label" style="left:${labelX}%;top:${labelY}%;">${yds}y</div>`;
+  }
+
+  const teeMarker = `<div class="reticle-icon reticle-icon-tee" style="left:${h.calib.teeX*100}%;top:${h.calib.teeY*100}%;">${TEE_ICON_SVG}</div>`;
+  const greenMarker = `<div class="reticle-icon reticle-icon-green" style="left:${h.calib.greenX*100}%;top:${h.calib.greenY*100}%;">${GREEN_ICON_SVG}</div>`;
+
+  const markers = ordered.map(r=>`<button class="reticle-marker" data-reticle-index="${r.origIndex}" style="left:${r.x*100}%;top:${r.y*100}%;">${CROSSHAIR_SVG}</button>`).join('');
+
+  return `<svg class="reticle-svg" viewBox="0 0 100 100" preserveAspectRatio="none">${lines}</svg>
+    <div class="reticle-labels">${labels}</div>
+    ${teeMarker}
+    ${greenMarker}
+    ${markers}`;
+}
+
+function redrawReticleOverlay(h){
+  const wrap = document.getElementById('reticleOverlayWrap');
+  if(!wrap) return;
+  wrap.innerHTML = renderReticleOverlay(h);
+  wireReticleMarkers(h);
+}
+
+function wireReticleMarkers(h){
+  document.querySelectorAll('.reticle-marker').forEach(el=>{
+    el.addEventListener('pointerdown', (e)=>{
+      e.stopPropagation();
+      clearReticleDeleteAffordance();
+      const arr = activeReticleArray(h);
+      const index = parseInt(el.dataset.reticleIndex,10);
+      const holePhotoFrame = document.getElementById('holePhotoFrame');
+
+      const timer = setTimeout(()=>{
+        reticleDrag = {holeNumber: h.number, index, moved:false};
+        if(navigator.vibrate) navigator.vibrate(8);
+      }, 450);
+
+      const onMove = (ev)=>{
+        if(!reticleDrag || reticleDrag.index !== index || !holePhotoFrame) return;
+        reticleDrag.moved = true;
+        const rect = holePhotoFrame.getBoundingClientRect();
+        const fx = Math.max(0, Math.min(1, (ev.clientX - rect.left) / rect.width));
+        const fy = Math.max(0, Math.min(1, (ev.clientY - rect.top) / rect.height));
+        arr[index] = {x:fx, y:fy};
+        redrawReticleOverlay(h);
+      };
+      const onUp = ()=>{
+        clearTimeout(timer);
+        const wasLongPress = !!reticleDrag;
+        reticleDrag = null;
+        document.removeEventListener('pointermove', onMove);
+        document.removeEventListener('pointerup', onUp);
+        if(wasLongPress){
+          showReticleDeleteAffordance(h, index);
+        }
+      };
+      document.addEventListener('pointermove', onMove);
+      document.addEventListener('pointerup', onUp);
+    });
+  });
+}
+
+function showReticleDeleteAffordance(h, index){
+  clearReticleDeleteAffordance();
+  const arr = activeReticleArray(h);
+  const pos = arr[index];
+  const wrap = document.getElementById('reticleOverlayWrap');
+  if(!pos || !wrap) return;
+
+  const btn = document.createElement('button');
+  btn.className = 'reticle-delete-x';
+  btn.textContent = '×';
+  btn.style.left = (pos.x*100) + '%';
+  btn.style.top = (pos.y*100) + '%';
+  btn.onclick = (e)=>{
+    e.stopPropagation();
+    arr.splice(index,1);
+    clearReticleDeleteAffordance();
+    playTick();
+    redrawReticleOverlay(h);
+  };
+  wrap.appendChild(btn);
+
+  reticleDeleteTimeout = setTimeout(()=>{
+    btn.style.transition = 'opacity 400ms ease';
+    btn.style.opacity = '0';
+    setTimeout(()=>{ if(btn.parentNode) btn.parentNode.removeChild(btn); }, 420);
+  }, 3000);
+}
+
+function clearReticleDeleteAffordance(){
+  if(reticleDeleteTimeout){ clearTimeout(reticleDeleteTimeout); reticleDeleteTimeout = null; }
+  document.querySelectorAll('.reticle-delete-x').forEach(b=>b.remove());
+}
+
+/* ---------------------------------------------------------
+   SCORE UPDATE CONFIRMATION
+   Tapping into a score box that already has a value asks
+   before allowing edits, to guard against accidental overwrites.
+   Empty boxes are untouched by this -- first entry never prompts.
+--------------------------------------------------------- */
+function showScoreUpdateConfirm(el){
+  clearScoreUpdateConfirm();
+  const rect = el.getBoundingClientRect();
+  const bubble = document.createElement('div');
+  bubble.id = 'scoreConfirmBubble';
+  bubble.className = 'score-confirm-bubble';
+  bubble.innerHTML = `
+    <div class="score-confirm-text">Update score?</div>
+    <div class="score-confirm-actions">
+      <button class="score-confirm-yes">Yes</button>
+      <button class="score-confirm-cancel">Cancel</button>
+    </div>`;
+  document.body.appendChild(bubble);
+
+  const bw = bubble.offsetWidth, bh = bubble.offsetHeight;
+  let left = rect.left + rect.width/2 - bw/2;
+  left = Math.max(8, Math.min(left, window.innerWidth - bw - 8));
+  let top = rect.top - bh - 10;
+  let below = false;
+  if(top < 8){ top = rect.bottom + 10; below = true; }
+  bubble.style.left = left + 'px';
+  bubble.style.top = top + 'px';
+  bubble.classList.add(below ? 'arrow-below' : 'arrow-above');
+  const arrowLeft = Math.max(10, Math.min(rect.left + rect.width/2 - left, bw - 10));
+  bubble.style.setProperty('--arrow-left', arrowLeft + 'px');
+
+  bubble.querySelector('.score-confirm-yes').onclick = (e)=>{
+    e.stopPropagation();
+    clearScoreUpdateConfirm();
+    el.focus();
+    el.select();
+  };
+  bubble.querySelector('.score-confirm-cancel').onclick = (e)=>{
+    e.stopPropagation();
+    clearScoreUpdateConfirm();
+  };
+  setTimeout(()=>{
+    document.addEventListener('pointerdown', dismissScoreConfirmOutside);
+  }, 0);
+}
+
+function dismissScoreConfirmOutside(e){
+  const bubble = document.getElementById('scoreConfirmBubble');
+  if(bubble && !bubble.contains(e.target)) clearScoreUpdateConfirm();
+}
+
+function clearScoreUpdateConfirm(){
+  const bubble = document.getElementById('scoreConfirmBubble');
+  if(bubble) bubble.remove();
+  document.removeEventListener('pointerdown', dismissScoreConfirmOutside);
+}
+
+/* ---------------------------------------------------------
+   MEDIA SOURCE CHOOSER
+   "Add photo/video" opens a small menu -- Camera (opens the
+   device camera directly) or Upload (the normal file/gallery
+   picker) -- rather than jumping straight to one or the other.
+--------------------------------------------------------- */
+function showMediaSourceMenu(anchorBtn, photoInput, videoInput, uploadInput){
+  clearMediaSourceMenu();
+  const rect = anchorBtn.getBoundingClientRect();
+  const menu = document.createElement('div');
+  menu.id = 'mediaSourceMenu';
+  menu.className = 'score-confirm-bubble media-source-menu';
+  menu.innerHTML = `
+    <button class="media-source-option" id="mediaSourceTakePhoto">📸 Take Photo</button>
+    <button class="media-source-option" id="mediaSourceRecordVideo">🎥 Record Video</button>
+    <button class="media-source-option" id="mediaSourceUpload">🖼 Upload</button>`;
+  document.body.appendChild(menu);
+
+  const mw = menu.offsetWidth, mh = menu.offsetHeight;
+  let left = rect.left + rect.width/2 - mw/2;
+  left = Math.max(8, Math.min(left, window.innerWidth - mw - 8));
+  let top = rect.top - mh - 10;
+  let below = false;
+  if(top < 8){ top = rect.bottom + 10; below = true; }
+  menu.style.left = left + 'px';
+  menu.style.top = top + 'px';
+  menu.classList.add(below ? 'arrow-below' : 'arrow-above');
+  const arrowLeft = Math.max(10, Math.min(rect.left + rect.width/2 - left, mw - 10));
+  menu.style.setProperty('--arrow-left', arrowLeft + 'px');
+
+  document.getElementById('mediaSourceTakePhoto').onclick = (e)=>{
+    e.stopPropagation();
+    clearMediaSourceMenu();
+    if(photoInput) photoInput.click();
+  };
+  document.getElementById('mediaSourceRecordVideo').onclick = (e)=>{
+    e.stopPropagation();
+    clearMediaSourceMenu();
+    if(videoInput) videoInput.click();
+  };
+  document.getElementById('mediaSourceUpload').onclick = (e)=>{
+    e.stopPropagation();
+    clearMediaSourceMenu();
+    if(uploadInput) uploadInput.click();
+  };
+  setTimeout(()=>{
+    document.addEventListener('pointerdown', dismissMediaSourceMenuOutside);
+  }, 0);
+}
+
+function dismissMediaSourceMenuOutside(e){
+  const menu = document.getElementById('mediaSourceMenu');
+  if(menu && !menu.contains(e.target)) clearMediaSourceMenu();
+}
+
+function clearMediaSourceMenu(){
+  const menu = document.getElementById('mediaSourceMenu');
+  if(menu) menu.remove();
+  document.removeEventListener('pointerdown', dismissMediaSourceMenuOutside);
+}
+
+function goToHole(newIndex, direction, skipAnim){
+  // if an admin is mid-way through placing default markers and swipes away
+  // without tapping "Save defaults", auto-commit what they've placed so far
+  // instead of silently discarding it and reverting to the formula seed
+  if(calibrationMode && calibrationMode.step === 'reticles'){
+    const beingCalibrated = holesConfig.find(hh=>hh.number===calibrationMode.holeNumber);
+    if(beingCalibrated){
+      beingCalibrated.reticles = calibrationMode.reticles.map(r=>({x:r.x,y:r.y}));
+      saveHole(beingCalibrated);
+    }
+    calibrationMode = null;
+  }
+  // any dragged/added/removed reticles are a "check and forget" tool --
+  // they reset to the shared default the moment you leave the hole
+  const leavingHole = holesConfig[currentHoleIndex];
+  if(leavingHole) delete sessionReticles[leavingHole.number];
+  clearReticleDeleteAffordance();
+  currentHoleIndex = ((newIndex % 18) + 18) % 18;
+  holeSlideDir = skipAnim ? null : direction;
+  playTick();
+  render();
+}
+
+function playTick(){
+  try{ if(navigator.vibrate) navigator.vibrate(4); }catch(e){}
+  try{
+    const ctx = window.__audioCtx || (window.__audioCtx = new (window.AudioContext||window.webkitAudioContext)());
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'square';
+    osc.frequency.value = 880;
+    gain.gain.setValueAtTime(0.05, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.08);
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.start(); osc.stop(ctx.currentTime + 0.08);
+  }catch(e){}
+}
+
+function fireConfetti(){
+  try{ if(navigator.vibrate) navigator.vibrate([15,40,15]); }catch(e){}
+  const colors = ['#FFD166','#FFE29A','#12261E','#3C6B54','#F5F3EC'];
+  for(let i=0;i<30;i++){
+    const el = document.createElement('div');
+    el.className = 'confetti-piece';
+    el.style.left = (Math.random()*100) + 'vw';
+    el.style.background = colors[Math.floor(Math.random()*colors.length)];
+    el.style.animationDelay = (Math.random()*0.25) + 's';
+    el.style.animationDuration = (0.9 + Math.random()*0.6) + 's';
+    document.body.appendChild(el);
+    setTimeout(()=>el.remove(), 1900);
+  }
+  showToast('🦅 Eagle! Great shot.');
+}
+
+function fireBirdieCelebration(){
+  try{ if(navigator.vibrate) navigator.vibrate(15); }catch(e){}
+  const colors = ['#C0392B','#FFD166','#FFE29A'];
+  for(let i=0;i<16;i++){
+    const el = document.createElement('div');
+    el.className = 'confetti-piece';
+    el.style.left = (Math.random()*100) + 'vw';
+    el.style.background = colors[Math.floor(Math.random()*colors.length)];
+    el.style.animationDelay = (Math.random()*0.2) + 's';
+    el.style.animationDuration = (0.7 + Math.random()*0.4) + 's';
+    document.body.appendChild(el);
+    setTimeout(()=>el.remove(), 1500);
+  }
+  showToast('🐦 Birdie!');
+}
+
+function fireSnowmanAnimation(){
+  try{ if(navigator.vibrate) navigator.vibrate(15); }catch(e){}
+  const flakes = ['❄️','❅','❆'];
+  for(let i=0;i<22;i++){
+    const el = document.createElement('div');
+    el.className = 'snow-piece';
+    el.textContent = flakes[Math.floor(Math.random()*flakes.length)];
+    el.style.left = (Math.random()*100) + 'vw';
+    el.style.fontSize = (12 + Math.random()*14) + 'px';
+    el.style.setProperty('--drift', ((Math.random()*60)-30) + 'px');
+    el.style.animationDelay = (Math.random()*0.4) + 's';
+    el.style.animationDuration = (2 + Math.random()*1.2) + 's';
+    document.body.appendChild(el);
+    setTimeout(()=>el.remove(), 3800);
+  }
+  showToast('⛄ Snowman!');
+}
+
+function escapeHtml(str){
+  if(str===undefined || str===null) return '';
+  return String(str).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+
+/* ---------------------------------------------------------
+   HANDLERS
+--------------------------------------------------------- */
+let pendingFeedFile = null;
+let pendingFeedIsVideo = false;
+let pendingTributeFile = null;
+let pendingTributeIsVideo = false;
+
+/* ---------------------------------------------------------
+   PHOTO HOSTING (Cloudinary)
+   window.storage caps out at 20MB total, which a season of
+   20 people posting photos would blow through fast. So photos
+   go to Cloudinary instead; we only store the returned URL
+   (a short string) in window.storage.
+--------------------------------------------------------- */
+const CLOUDINARY_CLOUD_NAME = 'kp3eoza3';
+const CLOUDINARY_UPLOAD_PRESET = 'TheJoey';
+
+async function uploadPhoto(file, maxW=1280, quality=0.8){
+  const dataUrl = await resizeImage(file, maxW, quality);
+  const blob = await (await fetch(dataUrl)).blob();
+  const form = new FormData();
+  form.append('file', blob);
+  form.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+  // client-generated unique id so same-named phone photos (IMG_1234.jpg) never collide
+  form.append('public_id', 'joey-' + uid() + '-' + Date.now());
+  const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
+    method: 'POST',
+    body: form
+  });
+  if(!res.ok) throw new Error('Cloudinary upload failed: '+res.status);
+  const data = await res.json();
+  return data.secure_url;
+}
+
+async function uploadVideo(file){
+  // no client-side compression for video -- uploaded as-is
+  const form = new FormData();
+  form.append('file', file);
+  form.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+  form.append('public_id', 'joey-' + uid() + '-' + Date.now());
+  const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/video/upload`, {
+    method: 'POST',
+    body: form
+  });
+  if(!res.ok) throw new Error('Cloudinary video upload failed: '+res.status);
+  const data = await res.json();
+  return data.secure_url;
+}
+
+function attachHandlers(){
+  // scorecard mode switch
+  document.querySelectorAll('[data-mode]').forEach(el=>{
+    el.onclick = ()=>{ scorecardMode = el.dataset.mode; render(); };
+  });
+
+  // score entry: group filter + team select
+  document.querySelectorAll('[data-group-filter]').forEach(el=>{
+    el.onclick = ()=>{ scoreboardGroupFilter = el.dataset.groupFilter; render(); };
+  });
+  document.querySelectorAll('[data-select-team]').forEach(el=>{
+    el.onclick = ()=>{ scoreboardSelectedTeam = el.dataset.selectTeam; render(); };
+  });
+  document.querySelectorAll('.score-input').forEach(el=>{
+    el.addEventListener('pointerdown', (e)=>{
+      if(el.value && el.value.trim() !== ''){
+        e.preventDefault();
+        showScoreUpdateConfirm(el);
+      }
+    });
+    el.onchange = async ()=>{
+      const hole = el.dataset.hole, tid = el.dataset.team;
+      const val = parseInt(el.value,10);
+      const holeNum = parseInt(hole,10);
+      if(val && val>0){
+        const s = scores[tid] || {};
+        const missingEarlier = holesConfig.some(h => h.number < holeNum && !s[h.number]);
+        if(missingEarlier){
+          showToast('Please input preceding hole score(s)');
+          el.value = (scores[tid] && scores[tid][hole]) ? scores[tid][hole] : '';
+          return;
+        }
+      }
+      if(!scores[tid]) scores[tid] = {};
+      if(val && val>0) scores[tid][hole] = val; else delete scores[tid][hole];
+      await saveTeamScore(tid);
+      playTick();
+      const h = holesConfig.find(h=>h.number===parseInt(hole,10));
+      if(h && val){
+        const cls = scoreClass(val, h.par);
+        if(cls==='eagle') fireConfetti();
+        else if(cls==='birdie') fireBirdieCelebration();
+        else if(val===h.par) showToast('Nice Par!');
+        if(val===8) fireSnowmanAnimation();
+      }
+      // preserve horizontal scroll position of the Front/Back Nine tables --
+      // re-rendering after a score entry shouldn't jump the view back to hole 1
+      const scrollPositions = Array.from(document.querySelectorAll('.pcard-scroll')).map(el=>el.scrollLeft);
+      render();
+      requestAnimationFrame(()=>{
+        document.querySelectorAll('.pcard-scroll').forEach((el,i)=>{
+          if(scrollPositions[i] !== undefined) el.scrollLeft = scrollPositions[i];
+        });
+      });
+    };
+  });
+  document.querySelectorAll('[data-quick-score]').forEach(el=>{
+    el.onclick = async ()=>{
+      const val = parseInt(el.dataset.quickScore,10);
+      const hole = el.dataset.quickHole, tid = el.dataset.quickTeam;
+      const holeNum = parseInt(hole,10);
+      const h = holesConfig.find(hh=>hh.number===holeNum);
+
+      const currentVal = scores[tid] && scores[tid][hole];
+      if(currentVal === val){
+        // Re-tapping the already-selected score deselects it -- same result as pressing Clear.
+        if(quickUndoState && quickUndoState.hole===holeNum && quickUndoState.teamId===tid){
+          clearTimeout(quickUndoState.timeoutId);
+          if(quickUndoState.previousVal){
+            scores[tid][hole] = quickUndoState.previousVal;
+          } else {
+            delete scores[tid][hole];
+          }
+          quickUndoState = null;
+        } else {
+          delete scores[tid][hole];
+        }
+        await saveTeamScore(tid);
+        pendingQuickEntry = null;
+        showToast('Cleared');
+        render();
+        return;
+      }
+
+      let previousVal;
+      if(quickUndoState && quickUndoState.hole===holeNum && quickUndoState.teamId===tid){
+        // already mid-undo-window for this hole -- keep the ORIGINAL prior value,
+        // not whatever was just overwritten a moment ago
+        previousVal = quickUndoState.previousVal;
+        clearTimeout(quickUndoState.timeoutId);
+      } else {
+        previousVal = (scores[tid] && scores[tid][hole]) || null;
+      }
+
+      if(!scores[tid]) scores[tid] = {};
+      scores[tid][hole] = val;
+      await saveTeamScore(tid);
+      playTick();
+      if(h){
+        const cls = scoreClass(val, h.par);
+        if(cls==='eagle') fireConfetti();
+        else if(cls==='birdie') fireBirdieCelebration();
+        else if(val===h.par) showToast('Nice Par!');
+        if(val===8) fireSnowmanAnimation();
+      }
+
+      const timeoutId = setTimeout(()=>{
+        quickUndoState = null;
+        render(); // the grace period is over -- advance to the next hole
+      }, 4000);
+      quickUndoState = {hole: holeNum, teamId: tid, previousVal, timeoutId};
+      pendingQuickEntry = {hole: holeNum, val};
+      render();
+    };
+  });
+  document.querySelectorAll('[data-quick-save-hole]').forEach(el=>{
+    el.onclick = async ()=>{
+      const hole = parseInt(el.dataset.quickSaveHole,10), tid = el.dataset.quickSaveTeam;
+      if(!quickUndoState || quickUndoState.hole !== hole || quickUndoState.teamId !== tid){
+        showToast('Tap a score first');
+        return;
+      }
+      clearTimeout(quickUndoState.timeoutId);
+      if(quickUndoState.previousVal){
+        scores[tid][hole] = quickUndoState.previousVal;
+      } else {
+        delete scores[tid][hole];
+      }
+      await saveTeamScore(tid);
+      quickUndoState = null;
+      pendingQuickEntry = null;
+      showToast('Undone');
+      render();
+    };
+  });
+  document.querySelectorAll('[data-review-hole]').forEach(el=>{
+    el.onclick = ()=>{
+      const holeNum = parseInt(el.dataset.reviewHole,10);
+      const idx = holesConfig.findIndex(h=>h.number===holeNum);
+      if(idx<0) return;
+      currentHoleIndex = idx;
+      switchTab('holes');
+    };
+  });
+
+  // team & group management
+  const askPlayers = (existing)=>{
+    const raw = prompt("Player names, separated by commas (2-3 players):", existing ? existing.join(', ') : '');
+    if(raw===null) return null;
+    const names = raw.split(',').map(s=>s.trim()).filter(Boolean);
+    if(names.length<2 || names.length>3){ alert('Please enter 2 or 3 player names.'); return undefined; }
+    return names;
+  };
+
+  document.getElementById('addGroupBtn') && (document.getElementById('addGroupBtn').onclick = async ()=>{
+    const label = prompt("Group name:", `Group ${groups.length+1}`);
+    if(!label || !label.trim()) return;
+    const teeTime = prompt("Tee time (optional):", '') || '';
+    groups.push({id: uid(), label: label.trim(), teeTime: teeTime.trim()});
+    await save('groups', JSON.stringify(groups), true);
+    render();
+    showToast('Group added');
+  });
+
+  document.querySelectorAll('[data-edit-group]').forEach(el=>{
+    el.onclick = async ()=>{
+      const g = groups.find(g=>g.id===el.dataset.editGroup);
+      if(!g) return;
+      const label = prompt("Group name:", g.label);
+      if(label===null || !label.trim()) return;
+      const teeTime = prompt("Tee time:", g.teeTime||'');
+      if(teeTime===null) return;
+      g.label = label.trim(); g.teeTime = teeTime.trim();
+      await save('groups', JSON.stringify(groups), true);
+      render();
+    };
+  });
+  document.querySelectorAll('[data-remove-group]').forEach(el=>{
+    el.onclick = async ()=>{
+      if(!confirm('Remove this group? Its teams will become unassigned.')) return;
+      const gid = el.dataset.removeGroup;
+      groups = groups.filter(g=>g.id!==gid);
+      teams.forEach(t=>{ if(t.groupId===gid) t.groupId = null; });
+      await save('groups', JSON.stringify(groups), true);
+      await save('teams', JSON.stringify(teams), true);
+      render();
+      showToast('Group removed');
+    };
+  });
+
+  document.querySelectorAll('[data-add-team-to]').forEach(el=>{
+    el.onclick = async ()=>{
+      const players = askPlayers();
+      if(!players || players===undefined) return;
+      const t = {id: uid(), label: nextTeamLabel(), groupId: el.dataset.addTeamTo, players};
+      teams.push(t);
+      scoreboardSelectedTeam = t.id;
+      await save('teams', JSON.stringify(teams), true);
+      render();
+      showToast(`Team ${t.label} added`);
+    };
+  });
+  const addUnassignedTeamBtn = document.getElementById('addUnassignedTeamBtn');
+  if(addUnassignedTeamBtn) addUnassignedTeamBtn.onclick = async ()=>{
+    const players = askPlayers();
+    if(!players || players===undefined) return;
+    const t = {id: uid(), label: nextTeamLabel(), groupId: null, players};
+    teams.push(t);
+    scoreboardSelectedTeam = t.id;
+    await save('teams', JSON.stringify(teams), true);
+    render();
+    showToast(`Team ${t.label} added`);
+  };
+  document.querySelectorAll('[data-edit-team]').forEach(el=>{
+    el.onclick = async ()=>{
+      const t = teams.find(t=>t.id===el.dataset.editTeam);
+      if(!t) return;
+      const players = askPlayers(t.players);
+      if(players===null || players===undefined) return;
+      t.players = players;
+      await save('teams', JSON.stringify(teams), true);
+      render();
+      showToast('Team updated');
+    };
+  });
+  document.querySelectorAll('[data-remove-team]').forEach(el=>{
+    el.onclick = async ()=>{
+      if(!confirm('Remove this team? Its scores will be deleted.')) return;
+      const tid = el.dataset.removeTeam;
+      teams = teams.filter(t=>t.id!==tid);
+      delete scores[tid];
+      if(scoreboardSelectedTeam===tid) scoreboardSelectedTeam = null;
+      await save('teams', JSON.stringify(teams), true);
+      await deleteTeamScore(tid);
+      render();
+      showToast('Team removed');
+    };
+  });
+
+  // holes tab
+  const prevHole = document.getElementById('prevHole');
+  const nextHole = document.getElementById('nextHole');
+  if(prevHole) prevHole.onclick = ()=>{ goToHole(currentHoleIndex-1, 'right'); };
+  if(nextHole) nextHole.onclick = ()=>{ goToHole(currentHoleIndex+1, 'left'); };
+  document.querySelectorAll('[data-goto-hole]').forEach(el=>{
+    el.onclick = ()=>{ goToHole(parseInt(el.dataset.gotoHole,10), null); };
+  });
+  // hole calibration + reticle interaction
+  const holePhotoFrame = document.getElementById('holePhotoFrame');
+  if(holePhotoFrame){
+    holePhotoFrame.addEventListener('click', async (e)=>{
+      if(e.target.closest('.reticle-marker')) return; // handled separately below
+      const h = holesConfig.find(hh=>hh.number===parseInt(holePhotoFrame.dataset.holeFrame,10));
+      if(!h) return;
+      const rect = holePhotoFrame.getBoundingClientRect();
+      const fx = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+      const fy = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
+
+      if(calibrationMode && calibrationMode.holeNumber === h.number){
+        if(calibrationMode.step === 'tee'){
+          h.calib = {teeX: fx, teeY: fy, greenX: fx, greenY: fy};
+          calibrationMode.step = 'green';
+          render();
+        } else if(calibrationMode.step === 'green'){
+          h.calib.greenX = fx;
+          h.calib.greenY = fy;
+          // seed with the formula as a starting point -- admin freely
+          // adds/drags/removes from here to set the real defaults
+          calibrationMode.reticles = generateDefaultReticles(h);
+          calibrationMode.step = 'reticles';
+          render();
+        } else if(calibrationMode.step === 'reticles'){
+          if(calibrationMode.reticles.length >= 5) return;
+          calibrationMode.reticles.push({x:fx, y:fy});
+          playTick();
+          redrawReticleOverlay(h);
+        }
+        return;
+      }
+
+      if(!h.calib) return; // no adding markers until calibrated
+      const arr = activeReticleArray(h);
+      if(arr.length >= 5) return;
+      arr.push({x:fx, y:fy});
+      playTick();
+      redrawReticleOverlay(h);
+    });
+  }
+
+  const calibrateHoleBtn = document.getElementById('calibrateHoleBtn');
+  if(calibrateHoleBtn) calibrateHoleBtn.onclick = ()=>{
+    const h = holesConfig[currentHoleIndex];
+    calibrationMode = {holeNumber: h.number, step: 'tee', reticles: []};
+    render();
+  };
+
+  const calibDoneBtn = document.getElementById('calibDoneBtn');
+  if(calibDoneBtn) calibDoneBtn.onclick = async ()=>{
+    const h = holesConfig[currentHoleIndex];
+    h.reticles = calibrationMode.reticles.map(r=>({x:r.x,y:r.y}));
+    calibrationMode = null;
+    delete sessionReticles[h.number]; // pick up the fresh default next time it's viewed
+    await saveHole(h);
+    showToast('Default markers saved');
+    render();
+  };
+
+  const calibCancelBtn = document.getElementById('calibCancelBtn');
+  if(calibCancelBtn) calibCancelBtn.onclick = ()=>{
+    calibrationMode = null;
+    render();
+  };
+
+  if(holePhotoFrame){
+    const hForMarkers = holesConfig.find(hh=>hh.number===parseInt(holePhotoFrame.dataset.holeFrame,10));
+    if(hForMarkers) wireReticleMarkers(hForMarkers);
+  }
+  document.querySelectorAll('[data-set-contest]').forEach(el=>{
+    el.onclick = async ()=>{
+      const holeNum = el.dataset.setContest;
+      const existing = contests[holeNum] || {};
+      const winner = prompt("Current Leader:", existing.winner || '');
+      if(winner===null || !winner.trim()) return;
+      const distance = prompt("Distance (optional, e.g. 4' 2\" or 285 yds):", existing.distance || '') || '';
+      contests[holeNum] = {winner: winner.trim(), distance: distance.trim()};
+      await save('contests', JSON.stringify(contests), true);
+      render();
+      showToast('Contest updated');
+    };
+  });
+  document.querySelectorAll('[data-toggle-extra-menu]').forEach(el=>{
+    el.onclick = (e)=>{
+      e.stopPropagation();
+      const id = el.dataset.toggleExtraMenu;
+      document.querySelectorAll('.extra-contest-menu').forEach(m=>{
+        m.style.display = (m.id === `extraMenu-${id}` && m.style.display==='none') ? 'block' : 'none';
+      });
+    };
+  });
+  document.querySelectorAll('.extra-contest-menu').forEach(m=>{
+    m.onclick = (e)=>e.stopPropagation();
+  });
+  document.addEventListener('click', ()=>{
+    document.querySelectorAll('.extra-contest-menu').forEach(m=>m.style.display='none');
+  }, {once:true});
+  document.querySelectorAll('[data-set-extra-contest]').forEach(el=>{
+    el.onclick = async ()=>{
+      const id = el.dataset.setExtraContest;
+      const ec = extraContests.find(x=>x.id===id);
+      if(!ec) return;
+      const winner = prompt("Current Leader:", ec.winner||'');
+      if(winner===null || !winner.trim()) return;
+      const distance = prompt("Distance or score (optional):", ec.distance||'') || '';
+      ec.winner = winner.trim();
+      ec.distance = distance.trim();
+      await save('extra-contests', JSON.stringify(extraContests), true);
+      render();
+      showToast('Contest updated');
+    };
+  });
+  document.querySelectorAll('[data-edit-extra-contest]').forEach(el=>{
+    el.onclick = async ()=>{
+      const id = el.dataset.editExtraContest;
+      const ec = extraContests.find(x=>x.id===id);
+      if(!ec) return;
+      const name = prompt("Contest name:", ec.name||'');
+      if(name===null || !name.trim()) return;
+      const location = prompt("Where is it held? (optional):", ec.location||'') || '';
+      ec.name = name.trim();
+      ec.location = location.trim();
+      await save('extra-contests', JSON.stringify(extraContests), true);
+      render();
+      showToast('Contest updated');
+    };
+  });
+  document.querySelectorAll('[data-remove-extra-contest]').forEach(el=>{
+    el.onclick = async ()=>{
+      const id = el.dataset.removeExtraContest;
+      const ec = extraContests.find(x=>x.id===id);
+      if(!ec) return;
+      if(!confirm(`Remove "${ec.name}"? This can't be undone.`)) return;
+      extraContests = extraContests.filter(x=>x.id!==id);
+      await save('extra-contests', JSON.stringify(extraContests), true);
+      render();
+      showToast('Contest removed');
+    };
+  });
+  const addExtraContestBtn = document.getElementById('addExtraContestBtn');
+  if(addExtraContestBtn) addExtraContestBtn.onclick = async ()=>{
+    const name = prompt("Contest name (e.g. 'The Golden Boy'):");
+    if(name===null || !name.trim()) return;
+    const location = prompt("Where is it held? (optional, e.g. 'Practice Green'):") || '';
+    extraContests.push({id: uid(), name: name.trim(), location: location.trim(), winner:'', distance:''});
+    await save('extra-contests', JSON.stringify(extraContests), true);
+    render();
+    showToast('Contest added');
+  };
+  const toggleContestLockBtn = document.getElementById('toggleContestLockBtn');
+  if(toggleContestLockBtn) toggleContestLockBtn.onclick = async ()=>{
+    contestsLocked = !contestsLocked;
+    await save('contests-locked', contestsLocked ? 'true' : 'false', true);
+    render();
+    showToast(contestsLocked ? 'Winners locked to admin only' : 'Players can now set winners');
+  };
+  const editHoleBtn = document.getElementById('editHoleBtn');
+  if(editHoleBtn) editHoleBtn.onclick = async ()=>{
+    const h = holesConfig[currentHoleIndex];
+    const par = prompt("Par:", h.par); if(par===null) return;
+    const yards = prompt("Yards:", h.yards); if(yards===null) return;
+    const handicap = prompt("Handicap (1-18):", h.handicap!==undefined?h.handicap:''); if(handicap===null) return;
+    const desc = prompt("Hole description:", h.description); if(desc===null) return;
+    const existingContestName = h.contestName || (h.contestType==='ctp' ? 'Closest to the Pin' : h.contestType==='longdrive' ? 'Longest Drive' : '');
+    const contestInput = prompt("Side contest name on this hole (leave blank for none):", existingContestName);
+    if(contestInput===null) return;
+    h.par = parseInt(par,10)||h.par;
+    h.yards = parseInt(yards,10)||h.yards;
+    h.handicap = parseInt(handicap,10) || h.handicap;
+    h.description = desc;
+    h.contestName = contestInput.trim() || null;
+    h.contestType = null;
+    await saveHole(h);
+    render();
+    showToast('Hole updated');
+  };
+  document.querySelectorAll('.hole-photo-input').forEach(el=>{
+    el.onchange = async (e)=>{
+      const f = e.target.files[0]; if(!f) return;
+      const holeNum = parseInt(el.dataset.holePhoto,10);
+      showToast('Uploading photo…');
+      try{
+        const url = await uploadPhoto(f, 1280, 0.8);
+        const h = holesConfig.find(h=>h.number===holeNum);
+        if(h){
+          h.photo = url;
+          await saveHole(h);
+          render();
+          showToast('Photo added');
+        }
+      }catch(err){
+        console.error(err);
+        showToast("Couldn't upload photo — check connection and try again");
+      }
+    };
+  });
+
+  // feed
+  document.querySelectorAll('[data-toggle-tag]').forEach(el=>{
+    el.onclick = ()=>{
+      const t = el.dataset.toggleTag;
+      pendingFeedTags = pendingFeedTags.includes(t) ? pendingFeedTags.filter(x=>x!==t) : [...pendingFeedTags, t];
+      render();
+    };
+  });
+  document.querySelectorAll('[data-filter-tag]').forEach(el=>{
+    el.onclick = ()=>{ feedFilterTag = el.dataset.filterTag; render(); };
+  });
+  async function handleMediaFileSelected(f, kind){
+    if(!f) return;
+    const isVideo = f.type.startsWith('video/');
+    const previewWrapId = kind==='feed' ? 'feedImgPreviewWrap' : 'tributeImgPreviewWrap';
+    if(kind==='feed'){ pendingFeedFile = f; pendingFeedIsVideo = isVideo; }
+    else { pendingTributeFile = f; pendingTributeIsVideo = isVideo; }
+    // small local preview only — the real upload happens on Post, so an
+    // abandoned draft never wastes a Cloudinary upload
+    if(isVideo){
+      if(f.size > 60*1024*1024) showToast("That's a big video — upload may take a while on course wifi");
+      const objUrl = URL.createObjectURL(f);
+      document.getElementById(previewWrapId).innerHTML = `<video src="${objUrl}" controls playsinline style="width:100%;border-radius:8px;margin-top:6px;"></video>`;
+    } else {
+      const previewUrl = await resizeImage(f, 500, 0.6);
+      document.getElementById(previewWrapId).innerHTML = `<img src="${previewUrl}" style="width:100%;border-radius:8px;margin-top:6px;">`;
+    }
+  }
+
+  function wireMediaButton(btnId, photoInputId, videoInputId, uploadInputId, kind){
+    const btn = document.getElementById(btnId);
+    const photoInput = document.getElementById(photoInputId);
+    const videoInput = document.getElementById(videoInputId);
+    const uploadInput = document.getElementById(uploadInputId);
+    if(photoInput) photoInput.onchange = (e)=>{ handleMediaFileSelected(e.target.files[0], kind); e.target.value=''; };
+    if(videoInput) videoInput.onchange = (e)=>{ handleMediaFileSelected(e.target.files[0], kind); e.target.value=''; };
+    if(uploadInput) uploadInput.onchange = (e)=>{ handleMediaFileSelected(e.target.files[0], kind); e.target.value=''; };
+    if(btn) btn.onclick = ()=>showMediaSourceMenu(btn, photoInput, videoInput, uploadInput);
+  }
+  wireMediaButton('feedMediaBtn', 'feedPhotoCaptureInput', 'feedVideoCaptureInput', 'feedUploadInput', 'feed');
+  wireMediaButton('tributeMediaBtn', 'tributePhotoCaptureInput', 'tributeVideoCaptureInput', 'tributeUploadInput', 'tribute');
+
+  const feedPostBtn = document.getElementById('feedPostBtn');
+  if(feedPostBtn) feedPostBtn.onclick = async ()=>{
+    const text = document.getElementById('feedText').value.trim();
+    if(!text && !pendingFeedFile){ showToast('Write something or add a photo/video'); return; }
+    if(!myName){ document.getElementById('nameGate').style.display='flex'; return; }
+    let imgUrl = null, videoUrl = null;
+    if(pendingFeedFile){
+      showToast(pendingFeedIsVideo ? 'Uploading video…' : 'Uploading photo…');
+      try{
+        if(pendingFeedIsVideo){
+          videoUrl = await uploadVideo(pendingFeedFile);
+        } else {
+          imgUrl = await uploadPhoto(pendingFeedFile, 1280, 0.8);
+        }
+      }catch(err){
+        console.error(err);
+        showToast(`Couldn't upload ${pendingFeedIsVideo?'video':'photo'} — try posting again`);
+        return;
+      }
+    }
+    const newPost = {id:uid(), name:myName, text, img:imgUrl, video:videoUrl, tags:[...pendingFeedTags], time:Date.now(), likes:0, likedByMe:false, comments:[]};
+    feedPosts.push(newPost);
+    pendingFeedFile = null;
+    pendingFeedIsVideo = false;
+    pendingFeedTags = [];
+    document.getElementById('feedImgPreviewWrap').innerHTML = '';
+    await savePost(newPost, 'feed-post:');
+    render();
+  };
+
+  // tribute
+  const tributePostBtn = document.getElementById('tributePostBtn');
+  if(tributePostBtn) tributePostBtn.onclick = async ()=>{
+    const text = document.getElementById('tributeText').value.trim();
+    if(!text && !pendingTributeFile){ showToast('Write something or add a photo/video'); return; }
+    if(!myName){ document.getElementById('nameGate').style.display='flex'; return; }
+    let imgUrl = null, videoUrl = null;
+    if(pendingTributeFile){
+      showToast(pendingTributeIsVideo ? 'Uploading video…' : 'Uploading photo…');
+      try{
+        if(pendingTributeIsVideo){
+          videoUrl = await uploadVideo(pendingTributeFile);
+        } else {
+          imgUrl = await uploadPhoto(pendingTributeFile, 1280, 0.8);
+        }
+      }catch(err){
+        console.error(err);
+        showToast(`Couldn't upload ${pendingTributeIsVideo?'video':'photo'} — try posting again`);
+        return;
+      }
+    }
+    const newTribute = {id:uid(), name:myName, text, img:imgUrl, video:videoUrl, time:Date.now(), likes:0, likedByMe:false, comments:[]};
+    tributePosts.push(newTribute);
+    pendingTributeFile = null;
+    pendingTributeIsVideo = false;
+    document.getElementById('tributeImgPreviewWrap').innerHTML = '';
+    await savePost(newTribute, 'tribute-post:');
+    render();
+  };
+
+  document.querySelectorAll('[data-like]').forEach(el=>{
+    el.onclick = async ()=>{
+      const id = el.dataset.like;
+      const isFeed = feedPosts.find(p=>p.id===id);
+      const post = isFeed || tributePosts.find(p=>p.id===id);
+      if(!post) return;
+      post.likedByMe = !post.likedByMe;
+      post.likes = (post.likes||0) + (post.likedByMe ? 1 : -1);
+      await savePost(post, isFeed ? 'feed-post:' : 'tribute-post:');
+      render();
+    };
+  });
+
+  document.querySelectorAll('[data-toggle-comments]').forEach(el=>{
+    el.onclick = ()=>{
+      const id = el.dataset.toggleComments;
+      expandedComments[id] = !expandedComments[id];
+      render();
+    };
+  });
+
+  document.querySelectorAll('[data-toggle-lb-row]').forEach(el=>{
+    el.onclick = ()=>{
+      const id = el.dataset.toggleLbRow;
+      expandedLbRows[id] = !expandedLbRows[id];
+      render();
+    };
+  });
+
+  async function submitComment(postId){
+    const input = document.querySelector(`.comment-input[data-comment-post="${postId}"]`);
+    if(!input) return;
+    const text = input.value.trim();
+    if(!text) return;
+    if(!myName){ document.getElementById('nameGate').style.display='flex'; return; }
+    const isFeed = feedPosts.find(p=>p.id===postId);
+    const post = isFeed || tributePosts.find(p=>p.id===postId);
+    if(!post) return;
+    if(!post.comments) post.comments = [];
+    post.comments.push({id:uid(), name:myName, text, time:Date.now()});
+    await savePost(post, isFeed ? 'feed-post:' : 'tribute-post:');
+    expandedComments[postId] = true; // keep the thread open after replying
+    render();
+  }
+
+  document.querySelectorAll('[data-comment-send]').forEach(el=>{
+    el.onclick = ()=>submitComment(el.dataset.commentSend);
+  });
+  document.querySelectorAll('.comment-input').forEach(el=>{
+    el.addEventListener('keydown', (e)=>{
+      if(e.key === 'Enter'){
+        e.preventDefault();
+        submitComment(el.dataset.commentPost);
+      }
+    });
+  });
+
+  // post edit / delete (own posts, or any post if admin)
+  document.querySelectorAll('[data-edit-post-btn]').forEach(el=>{
+    el.onclick = ()=>{ editingPostId = el.dataset.editPostBtn; render(); };
+  });
+  document.querySelectorAll('[data-cancel-post-edit]').forEach(el=>{
+    el.onclick = ()=>{ editingPostId = null; render(); };
+  });
+  document.querySelectorAll('[data-save-post]').forEach(el=>{
+    el.onclick = async ()=>{
+      const id = el.dataset.savePost;
+      const box = el.closest('.post-edit-box');
+      const input = box ? box.querySelector('.post-edit-input') : null;
+      if(!input) return;
+      const isFeed = feedPosts.find(p=>p.id===id);
+      const post = isFeed || tributePosts.find(p=>p.id===id);
+      if(!post) return;
+      post.text = input.value.trim();
+      await savePost(post, isFeed ? 'feed-post:' : 'tribute-post:');
+      editingPostId = null;
+      render();
+    };
+  });
+  document.querySelectorAll('[data-delete-post]').forEach(el=>{
+    el.onclick = async ()=>{
+      const id = el.dataset.deletePost;
+      if(!confirm('Delete this post? This can\'t be undone.')) return;
+      const isFeed = feedPosts.find(p=>p.id===id);
+      if(isFeed){
+        feedPosts = feedPosts.filter(p=>p.id!==id);
+        await deletePost(id, 'feed-post:');
+      } else {
+        tributePosts = tributePosts.filter(p=>p.id!==id);
+        await deletePost(id, 'tribute-post:');
+      }
+      render();
+    };
+  });
+
+  // comment edit / delete (own replies, or any reply if admin)
+  document.querySelectorAll('[data-edit-comment-btn]').forEach(el=>{
+    el.onclick = ()=>{ editingCommentId = el.dataset.editCommentBtn; render(); };
+  });
+  document.querySelectorAll('[data-cancel-comment-edit]').forEach(el=>{
+    el.onclick = ()=>{ editingCommentId = null; render(); };
+  });
+  document.querySelectorAll('[data-save-comment]').forEach(el=>{
+    el.onclick = async ()=>{
+      const commentId = el.dataset.saveComment;
+      const postId = el.dataset.commentPost;
+      const box = el.closest('.comment-edit-box');
+      const input = box ? box.querySelector('.comment-edit-input') : null;
+      if(!input) return;
+      const text = input.value.trim();
+      if(!text) return;
+      const isFeed = feedPosts.find(p=>p.id===postId);
+      const post = isFeed || tributePosts.find(p=>p.id===postId);
+      if(!post) return;
+      const comment = (post.comments||[]).find(c=>c.id===commentId);
+      if(!comment) return;
+      comment.text = text;
+      await savePost(post, isFeed ? 'feed-post:' : 'tribute-post:');
+      editingCommentId = null;
+      render();
+    };
+  });
+  document.querySelectorAll('[data-delete-comment]').forEach(el=>{
+    el.onclick = async ()=>{
+      const commentId = el.dataset.deleteComment;
+      const postId = el.dataset.commentPost;
+      if(!confirm('Delete this reply?')) return;
+      const isFeed = feedPosts.find(p=>p.id===postId);
+      const post = isFeed || tributePosts.find(p=>p.id===postId);
+      if(!post) return;
+      post.comments = (post.comments||[]).filter(c=>c.id!==commentId);
+      await savePost(post, isFeed ? 'feed-post:' : 'tribute-post:');
+      render();
+    };
+  });
+
+  // memorial
+  const memPhotoInput = document.getElementById('memPhotoInput');
+  if(memPhotoInput) memPhotoInput.onchange = async (e)=>{
+    const f = e.target.files[0]; if(!f) return;
+    showToast('Uploading photo…');
+    try{
+      memorialPhoto = await uploadPhoto(f, 1000, 0.85);
+      await save('memorial-photo', memorialPhoto, true);
+      render();
+      showToast('Photo added');
+    }catch(err){
+      console.error(err);
+      showToast("Couldn't upload photo — check connection and try again");
+    }
+  };
+  const changeMemPhoto = document.getElementById('changeMemPhoto');
+  if(changeMemPhoto) changeMemPhoto.onclick = ()=>{
+    memorialPhoto = null; render();
+  };
+  const editBioBtn = document.getElementById('editBioBtn');
+  if(editBioBtn) editBioBtn.onclick = async ()=>{
+    const bio = document.getElementById('bioText');
+    if(bio.getAttribute('contenteditable')==='true'){
+      memorialBio = bio.innerText.trim();
+      bio.setAttribute('contenteditable','false');
+      editBioBtn.textContent = 'Edit this page';
+      await save('memorial-bio', memorialBio, true);
+      showToast('Saved');
+    } else {
+      bio.setAttribute('contenteditable','true');
+      bio.focus();
+      editBioBtn.textContent = 'Save changes';
+    }
+  };
+  const addChampBtn = document.getElementById('addChampBtn');
+  if(addChampBtn) addChampBtn.onclick = async ()=>{
+    const year = prompt("Year:", new Date().getFullYear());
+    if(!year) return;
+    const name = prompt("Champion's name:");
+    if(!name) return;
+    champions.push({year, name});
+    await save('champions', JSON.stringify(champions), true);
+    render();
+    showToast('Champion added');
+  };
+}
+
+/* ---------------------------------------------------------
+   BACKUP / RESTORE
+--------------------------------------------------------- */
+function currentStateSnapshot(){
+  return {
+    _type: 'joe-mccormick-memorial-backup',
+    _version: 1,
+    _savedAt: new Date().toISOString(),
+    teams, groups, scores, holesConfig, contests, extraContests,
+    feedPosts, tributePosts, memorialBio, memorialPhoto, champions, heroYearText
+  };
+}
+function exportBackup(){
+  const data = JSON.stringify(currentStateSnapshot(), null, 2);
+  const blob = new Blob([data], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const stamp = new Date().toISOString().slice(0,16).replace(/[:T]/g,'-');
+  a.href = url;
+  a.download = `the-joey-backup-${stamp}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('Backup downloaded');
+}
+async function importBackup(file){
+  try{
+    const text = await file.text();
+    const data = JSON.parse(text);
+    if(data._type !== 'joe-mccormick-memorial-backup'){
+      alert("This doesn't look like a backup file from this app.");
+      return;
+    }
+    if(!confirm('Restore this backup? It will replace everything currently on the page for everyone.')) return;
+    teams = data.teams || [];
+    groups = data.groups || [];
+    scores = data.scores || {};
+    holesConfig = data.holesConfig || defaultHoles();
+    contests = data.contests || {};
+    extraContests = data.extraContests || [];
+    feedPosts = data.feedPosts || [];
+    tributePosts = data.tributePosts || [];
+    memorialBio = data.memorialBio || defaultBio();
+    memorialPhoto = data.memorialPhoto || null;
+    champions = data.champions || [];
+    heroYearText = data.heroYearText || heroYearText;
+
+    await Promise.all([
+      save('teams', JSON.stringify(teams), true),
+      save('groups', JSON.stringify(groups), true),
+      ...Object.keys(scores).map(tid=>saveTeamScore(tid)),
+      ...holesConfig.map(h=>saveHole(h)),
+      save('contests', JSON.stringify(contests), true),
+      save('extra-contests', JSON.stringify(extraContests), true),
+      ...feedPosts.map(p=>savePost(p, 'feed-post:')),
+      ...tributePosts.map(p=>savePost(p, 'tribute-post:')),
+      save('memorial-bio', memorialBio, true),
+      save('memorial-photo', memorialPhoto || '', true),
+      save('champions', JSON.stringify(champions), true),
+      save('hero-year', heroYearText, true),
+    ]);
+    render();
+    showToast('Backup restored');
+  }catch(e){
+    console.error(e);
+    alert("Couldn't read that backup file. Make sure it's an unedited download from this app.");
+  }
+}
+
+/* ---------------------------------------------------------
+   TAB SWITCHING
+--------------------------------------------------------- */
+document.getElementById('tabbar').addEventListener('click', (e)=>{
+  const btn = e.target.closest('button[data-tab]');
+  if(!btn) return;
+  switchTab(btn.dataset.tab);
+});
+
+const TAB_ORDER = ['scorecard','leaderboard','holes','feed','joe'];
+
+function haptic(){
+  if(navigator.vibrate){ navigator.vibrate(12); }
+}
+
+function switchTab(tab, skipAnim){
+  if(tab === currentTab) return;
+  if(currentTab === 'holes'){
+    // if mid-calibration, auto-commit placed markers rather than losing them
+    if(calibrationMode && calibrationMode.step === 'reticles'){
+      const beingCalibrated = holesConfig.find(hh=>hh.number===calibrationMode.holeNumber);
+      if(beingCalibrated){
+        beingCalibrated.reticles = calibrationMode.reticles.map(r=>({x:r.x,y:r.y}));
+        saveHole(beingCalibrated);
+      }
+      calibrationMode = null;
+    }
+    // leaving the Holes tab -- any live-dragged reticles reset to shared default
+    sessionReticles = {};
+  }
+  if(currentTab === 'leaderboard'){
+    expandedLbRows = {};
+  }
+  const oldIdx = TAB_ORDER.indexOf(currentTab);
+  const newIdx = TAB_ORDER.indexOf(tab);
+  tabSlideDir = skipAnim ? null : ((newIdx > oldIdx) ? 'left' : (newIdx < oldIdx ? 'right' : null));
+  currentTab = tab;
+  document.querySelectorAll('#tabbar button').forEach(b=>b.classList.toggle('active', b.dataset.tab===tab));
+  haptic();
+  render();
+  window.scrollTo(0,0);
+  if(tab==='scorecard'){
+    requestAnimationFrame(()=>{
+      const holeNum = window.__scorecardCurrentHole;
+      if(holeNum){
+        const nine = holeNum<=9 ? 'front' : 'back';
+        const localPos = holeNum<=9 ? holeNum : holeNum-9;
+        if(localPos>=6){
+          const el = document.querySelector(`.pcard-scroll[data-nine="${nine}"]`);
+          if(el) el.scrollLeft = el.scrollWidth - el.clientWidth;
+        }
+      }
+    });
+  }
+}
+
+/* ---------------------------------------------------------
+   INTERACTIVE DRAG-SWIPE TRANSITION
+   Content follows the finger in real time (with edge resistance),
+   previews the adjacent tab or hole underneath, and only commits
+   to the switch once released past a threshold — otherwise it
+   springs back to where it started. Excludes elements that
+   scroll horizontally on their own (scorecard tables, chip rows).
+   On the Holes tab, dragging over the hole image navigates
+   between holes instead of switching tabs.
+---------------------------------------------------------- */
+(function(){
+  const HSCROLL_SELECTOR = '.pcard-scroll, .group-filter, .player-select, .lb-expand-scroll';
+  const HOLE_IMAGE_SELECTOR = '.hole-photo-frame';
+  const COMMIT_PX = 90;
+  const SETTLE_MS = 340;   // "slower" commit / spring-back duration
+  const SETTLE_EASE = 'cubic-bezier(.22,.75,.35,1)';
+  const HOLE_SETTLE_MS = 400;
+  const HOLE_SETTLE_EASE = 'cubic-bezier(.33,.1,.2,1)'; // gentle ease-out, no overshoot
+
+  const viewport = document.getElementById('swipeViewport');
+  const track = document.getElementById('swipeTrack');
+  const ghostPrev = document.getElementById('ghostPrev');
+  const ghostNext = document.getElementById('ghostNext');
+
+  let mode = null;       // 'tab' | 'hole' | null
+  let dragging = false;
+  let decided = false;   // has axis (horizontal vs vertical) been determined for this touch?
+  let horizontal = false;
+  let startX = 0, startY = 0, lastDx = 0;
+  let canPrev = false, canNext = false;
+  let width = 0;
+
+  function isInsideHScroll(target){
+    let el = target;
+    while(el && el !== document.body){
+      if(el.matches && el.matches(HSCROLL_SELECTOR) && el.scrollWidth > el.clientWidth + 1) return true;
+      el = el.parentElement;
+    }
+    return false;
+  }
+
+  function tabPreviewHtml(tab){
+    if(tab==='leaderboard') return renderLeaderboard();
+    if(tab==='scorecard') return renderScorecard();
+    if(tab==='holes') return renderHoles(currentHoleIndex);
+    if(tab==='feed') return renderFeed();
+    if(tab==='joe') return renderJoe();
+    return '';
+  }
+
+  function beginDrag(target){
+    width = viewport.clientWidth;
+    mode = (currentTab==='holes' && target.closest && target.closest(HOLE_IMAGE_SELECTOR)) ? 'hole' : 'tab';
+
+    if(mode==='hole'){
+      canPrev = true; canNext = true; // holes wrap around
+      ghostPrev.innerHTML = `<div class="tab-content">${renderHoles(((currentHoleIndex-1)%18+18)%18)}</div>`;
+      ghostNext.innerHTML = `<div class="tab-content">${renderHoles((currentHoleIndex+1)%18)}</div>`;
+    } else {
+      const idx = TAB_ORDER.indexOf(currentTab);
+      canPrev = idx > 0;
+      canNext = idx < TAB_ORDER.length - 1;
+      ghostPrev.innerHTML = canPrev ? `<div class="tab-content">${tabPreviewHtml(TAB_ORDER[idx-1])}</div>` : '';
+      ghostNext.innerHTML = canNext ? `<div class="tab-content">${tabPreviewHtml(TAB_ORDER[idx+1])}</div>` : '';
+    }
+    track.style.transition = 'none';
+  }
+
+  function applyDrag(dx){
+    // rubber-band resistance when dragging past an unavailable edge
+    if(dx < 0 && !canNext) dx *= 0.3;
+    if(dx > 0 && !canPrev) dx *= 0.3;
+    lastDx = dx;
+    track.style.transform = `translateX(${dx}px)`;
+    ghostPrev.style.opacity = dx > 0 ? Math.min(0.55 + dx/width*0.45, 1) : 0.55;
+    ghostNext.style.opacity = dx < 0 ? Math.min(0.55 + (-dx)/width*0.45, 1) : 0.55;
+  }
+
+  function settle(commit){
+    const ms = mode==='hole' ? HOLE_SETTLE_MS : SETTLE_MS;
+    const ease = mode==='hole' ? HOLE_SETTLE_EASE : SETTLE_EASE;
+    track.style.transition = `transform ${ms}ms ${ease}`;
+    if(commit === 'next'){
+      track.style.transform = `translateX(${-width}px)`;
+    } else if(commit === 'prev'){
+      track.style.transform = `translateX(${width}px)`;
+    } else {
+      track.style.transform = 'translateX(0px)';
+    }
+    const onDone = ()=>{
+      track.removeEventListener('transitionend', onDone);
+      track.style.transition = 'none';
+      track.style.transform = 'translateX(0px)';
+      ghostPrev.innerHTML = ''; ghostNext.innerHTML = '';
+      if(commit === 'next'){
+        if(mode==='hole') goToHole(currentHoleIndex+1, null, true);
+        else switchTab(TAB_ORDER[TAB_ORDER.indexOf(currentTab)+1], true);
+      } else if(commit === 'prev'){
+        if(mode==='hole') goToHole(currentHoleIndex-1, null, true);
+        else switchTab(TAB_ORDER[TAB_ORDER.indexOf(currentTab)-1], true);
+      }
+      mode = null;
+    };
+    track.addEventListener('transitionend', onDone);
+  }
+
+  document.addEventListener('touchstart', (e)=>{
+    if(e.touches.length !== 1) return;
+    if(isInsideHScroll(e.target)){ dragging=false; return; }
+    startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
+    dragging = true;
+    decided = false;
+    horizontal = false;
+  }, {passive:true});
+
+  document.addEventListener('touchmove', (e)=>{
+    if(!dragging) return;
+    const dx = e.touches[0].clientX - startX;
+    const dy = e.touches[0].clientY - startY;
+    if(!decided){
+      if(Math.abs(dx) < 10 && Math.abs(dy) < 10) return;
+      decided = true;
+      horizontal = Math.abs(dx) > Math.abs(dy) * 1.2;
+      if(horizontal) beginDrag(e.target);
+    }
+    if(!horizontal) return;
+    applyDrag(dx);
+  }, {passive:true});
+
+  document.addEventListener('touchend', ()=>{
+    if(!dragging) return;
+    dragging = false;
+    if(!horizontal || mode===null) return;
+    if(lastDx <= -COMMIT_PX && canNext) settle('next');
+    else if(lastDx >= COMMIT_PX && canPrev) settle('prev');
+    else settle(null);
+  }, {passive:true});
+})();
+
+
+/* ---------------------------------------------------------
+   LIVE SYNC
+   Scores are entered on many phones at once during the round.
+   We poll for other people's updates on the score-focused tabs
+   only (scorecard/leaderboard) so we never blow away someone's
+   half-typed feed post or tribute by re-rendering under them.
+--------------------------------------------------------- */
+let syncInFlight = false;
+async function refreshLiveData(silent){
+  if(syncInFlight) return;
+  syncInFlight = true;
+  try{
+    const [tm, g, s] = await Promise.all([
+      window.storage.get('teams', true).catch(()=>null),
+      window.storage.get('groups', true).catch(()=>null),
+      loadAllScores(),
+    ]);
+    if(tm) teams = JSON.parse(tm.value);
+    if(g) groups = JSON.parse(g.value);
+    scores = s;
+    if(['scorecard','leaderboard'].includes(currentTab)) render();
+    if(!silent) showToast('Synced');
+  }catch(e){
+    console.error('sync failed', e);
+  }finally{
+    syncInFlight = false;
+  }
+}
+setInterval(()=>{
+  if(['scorecard','leaderboard'].includes(currentTab)) refreshLiveData(true);
+}, 20000);
+// re-sync immediately whenever the phone screen wakes back up
+document.addEventListener('visibilitychange', ()=>{
+  if(document.visibilityState === 'visible') refreshLiveData(true);
+});
+
+/* ---------------------------------------------------------
+   INIT
+--------------------------------------------------------- */
+/* ---------------------------------------------------------
+   LIGHTBOX
+   Tap-to-enlarge for any image marked with data-lightbox
+   (feed posts, tribute wall posts, Joe's memorial photo).
+--------------------------------------------------------- */
+document.addEventListener('click', (e)=>{
+  const target = e.target.closest('[data-lightbox]');
+  if(target){
+    document.getElementById('lightboxImg').src = target.dataset.lightbox;
+    document.getElementById('lightbox').style.display = 'flex';
+  }
+});
+document.getElementById('lightboxClose').onclick = ()=>{
+  document.getElementById('lightbox').style.display = 'none';
+};
+document.getElementById('lightbox').addEventListener('click', (e)=>{
+  if(e.target.id === 'lightbox'){ // tap the dark backdrop, not the image itself, to dismiss
+    document.getElementById('lightbox').style.display = 'none';
+  }
+});
+
+(async function init(){
+  if(!window.__storageReady){
+    await new Promise(resolve=>{
+      if(window.__storageReady) resolve();
+      else document.addEventListener('storage-ready', resolve, {once:true});
+    });
+  }
+  if(window.__storageInitFailed){
+    document.body.innerHTML = '<div style="padding:40px 24px;text-align:center;font-family:sans-serif;color:#333;">Couldn\'t connect to the database. Check your internet connection and reload the page.</div>';
+    return;
+  }
+  await loadAll();
+  wireIdentityGate();
+  checkNameGate();
+  updateAdminUI();
+  render();
+  const bootLoading = document.getElementById('bootLoading');
+  if(bootLoading) bootLoading.remove();
+
+  document.getElementById('backupToggle').onclick = ()=>{
+    const p = document.getElementById('backupPanel');
+    document.getElementById('identityPanel').style.display = 'none';
+    p.style.display = p.style.display==='none' ? 'block' : 'none';
+  };
+  document.getElementById('downloadBackupBtn').onclick = exportBackup;
+  document.getElementById('restoreBackupInput').onchange = (e)=>{
+    const f = e.target.files[0];
+    if(f) importBackup(f);
+    e.target.value = '';
+  };
+  document.getElementById('syncNowBtn').onclick = ()=>refreshLiveData(false);
+
+  document.getElementById('identityToggle').onclick = ()=>{
+    const p = document.getElementById('identityPanel');
+    document.getElementById('backupPanel').style.display = 'none';
+    if(p.style.display==='none'){
+      const roleLabel = isAdminSession ? 'Admin (this session)' : (myRole==='player' ? `Player, Team ${(teams.find(t=>t.id===myTeamId)||{}).label||'?'}` : myRole==='guest' ? 'Guest' : 'Not signed in');
+      document.getElementById('identitySummary').textContent = myName ? `${myName} · ${roleLabel}` : 'Not signed in yet.';
+      document.getElementById('identityAdminBtn').style.display = isAdminSession ? 'none' : 'block';
+      p.style.display = 'block';
+    } else {
+      p.style.display = 'none';
+    }
+  };
+  document.getElementById('identityResetBtn').onclick = ()=>{
+    document.getElementById('identityPanel').style.display = 'none';
+    resetIdentity();
+  };
+  document.getElementById('identityAdminBtn').onclick = ()=>{
+    document.getElementById('identityPanel').style.display = 'none';
+    document.getElementById('nameGate').style.display = 'flex';
+    document.getElementById('gateAdminPassInput').value = '';
+    document.getElementById('gateAdminError').style.display = 'none';
+    gateShowStep('gateStepAdmin');
+  };
+})();
+</script>
+</body>
+</html>
