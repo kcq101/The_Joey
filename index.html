@@ -2255,12 +2255,12 @@ function flagSaveIssue(failed){
   }
 }
 
-function showToast(msg){
+function showToast(msg, ms=1600){
   const t = document.getElementById('toast');
   t.textContent = msg;
   t.classList.add('show');
   clearTimeout(showToast._t);
-  showToast._t = setTimeout(()=>t.classList.remove('show'), 1600);
+  showToast._t = setTimeout(()=>t.classList.remove('show'), ms);
 }
 
 /* ---------------------------------------------------------
@@ -2300,6 +2300,7 @@ function gateShowStep(id){
   document.getElementById('nameGate').classList.toggle('gate-team-mode', id==='gateStep2Team');
 }
 
+let feedPosting = false, tributePosting = false;  // post upload in progress
 let paintGateTeams = null;   // set in wireIdentityGate
 let gatePendingRole = null; // 'player' | 'guest' | 'admin-name' while mid-flow
 
@@ -3491,7 +3492,7 @@ function renderFeed(){
           <input type="file" accept="image/*" capture="environment" id="feedPhotoCaptureInput" style="display:none;">
           <input type="file" accept="video/*" capture="environment" id="feedVideoCaptureInput" style="display:none;">
           <input type="file" accept="image/*,video/*" id="feedUploadInput" style="display:none;">
-          <button class="btn" id="feedPostBtn">Post</button>
+          <button class="btn" id="feedPostBtn" ${feedPosting?'disabled':''}>${feedPosting?'Posting…':'Post'}</button>
         </div>
         <div id="feedImgPreviewWrap"></div>
       </div>
@@ -3665,7 +3666,7 @@ function renderJoe(){
           <input type="file" accept="image/*" capture="environment" id="tributePhotoCaptureInput" style="display:none;">
           <input type="file" accept="video/*" capture="environment" id="tributeVideoCaptureInput" style="display:none;">
           <input type="file" accept="image/*,video/*" id="tributeUploadInput" style="display:none;">
-          <button class="btn joe-post-btn" id="tributePostBtn">Post <span aria-hidden="true">›</span></button>
+          <button class="btn joe-post-btn" id="tributePostBtn" ${tributePosting?'disabled':''}>${tributePosting?'Posting…':'Post <span aria-hidden="true">›</span>'}</button>
         </div>
         <div id="tributeImgPreviewWrap"></div>
       </div>
@@ -4003,12 +4004,12 @@ function showMediaSourceMenu(anchorBtn, photoInput, videoInput, uploadInput){
   document.getElementById('mediaSourceTakePhoto').onclick = (e)=>{
     e.stopPropagation();
     clearMediaSourceMenu();
-    if(photoInput) photoInput.click();
+    if(photoInput){ markCameraOpen(); photoInput.click(); }
   };
   document.getElementById('mediaSourceRecordVideo').onclick = (e)=>{
     e.stopPropagation();
     clearMediaSourceMenu();
-    if(videoInput) videoInput.click();
+    if(videoInput){ markCameraOpen(); videoInput.click(); };
   };
   document.getElementById('mediaSourceUpload').onclick = (e)=>{
     e.stopPropagation();
@@ -4135,6 +4136,127 @@ let pendingFeedPreviewHtml = '', pendingTributePreviewHtml = '';
 let pendingTributeIsVideo = false;
 
 /* ---------------------------------------------------------
+   UNSENT MEDIA DRAFTS
+   A photo taken from inside the app is NOT saved to the phone's
+   gallery, so if the upload fails or the app resets, it's gone.
+   Keep a copy on this device (IndexedDB) from the moment it's
+   attached until the post succeeds; restore it on next open.
+--------------------------------------------------------- */
+const MEDIA_DRAFT_MAX_AGE = 3*24*60*60*1000;   // drop drafts older than 3 days
+const MEDIA_DRAFT_MAX_VIDEO = 60*1024*1024;    // skip storing huge videos
+function draftDb(){
+  return new Promise((res, rej)=>{
+    const r = indexedDB.open('joey-drafts', 1);
+    r.onupgradeneeded = ()=> r.result.createObjectStore('media');
+    r.onsuccess = ()=> res(r.result);
+    r.onerror = ()=> rej(r.error);
+  });
+}
+async function saveMediaDraft(kind, file, isVideo){
+  try{
+    if(isVideo && file.size > MEDIA_DRAFT_MAX_VIDEO) return;
+    const db = await draftDb();
+    await new Promise((res, rej)=>{
+      const tx = db.transaction('media', 'readwrite');
+      tx.objectStore('media').put({blob:file, type:file.type, name:file.name||'', isVideo, savedAt:Date.now()}, kind);
+      tx.oncomplete = res; tx.onerror = ()=> rej(tx.error);
+    });
+  }catch(e){ console.warn('draft save failed', e); }
+}
+async function loadMediaDraft(kind){
+  try{
+    const db = await draftDb();
+    return await new Promise(res=>{
+      const r = db.transaction('media').objectStore('media').get(kind);
+      r.onsuccess = ()=> res(r.result || null);
+      r.onerror = ()=> res(null);
+    });
+  }catch(e){ return null; }
+}
+async function clearMediaDraft(kind){
+  try{
+    const db = await draftDb();
+    await new Promise(res=>{
+      const tx = db.transaction('media', 'readwrite');
+      tx.objectStore('media').delete(kind);
+      tx.oncomplete = res; tx.onerror = res;
+    });
+  }catch(e){}
+}
+
+// Camera hand-off: remember when the in-app camera was opened, so we
+// don't auto-reload for an update the moment it hands back, and so we
+// can explain it if the phone closed the app while the camera was up.
+const CAMERA_FLAG_KEY = 'joey-camera-open';
+let cameraOpenedAt = 0;
+function markCameraOpen(){
+  cameraOpenedAt = Date.now();
+  try{ localStorage.setItem(CAMERA_FLAG_KEY, String(cameraOpenedAt)); }catch(e){}
+}
+function clearCameraFlag(){
+  try{ localStorage.removeItem(CAMERA_FLAG_KEY); }catch(e){}
+}
+function cameraRecentlyOpened(){ return Date.now() - cameraOpenedAt < 2*60*1000; }
+document.addEventListener('visibilitychange', ()=>{
+  // back from the camera and the app survived: drop the flag shortly after
+  if(document.visibilityState === 'visible' && cameraOpenedAt) setTimeout(clearCameraFlag, 4000);
+});
+
+// Attach a photo/video to the Feed or Tribute composer (also used to
+// restore a saved draft). Builds the small preview and saves the draft.
+async function attachPendingMedia(f, kind, restored){
+  if(!f) return;
+  clearCameraFlag();
+  const isVideo = (f.type || '').startsWith('video/');
+  const previewWrapId = kind==='feed' ? 'feedImgPreviewWrap' : 'tributeImgPreviewWrap';
+  if(kind==='feed'){ pendingFeedFile = f; pendingFeedIsVideo = isVideo; }
+  else { pendingTributeFile = f; pendingTributeIsVideo = isVideo; }
+  if(!restored) saveMediaDraft(kind, f, isVideo);
+  const removeBtn = `<button class="tiny-btn" type="button" data-remove-media="${kind}">✕ Remove ${isVideo?'video':'photo'}</button>`;
+  let html;
+  if(isVideo){
+    if(!restored && f.size > 60*1024*1024) showToast("That's a big video — upload may take a while on course wifi");
+    html = `<video src="${URL.createObjectURL(f)}" controls playsinline style="width:100%;border-radius:8px;margin-top:6px;"></video>`;
+  } else {
+    html = `<img src="${await resizeImage(f, 500, 0.6)}" style="width:100%;border-radius:8px;margin-top:6px;">`;
+  }
+  html += removeBtn;
+  if(kind==='feed') pendingFeedPreviewHtml = html; else pendingTributePreviewHtml = html;
+  const w = document.getElementById(previewWrapId); if(w) w.innerHTML = html;
+}
+document.addEventListener('click', (e)=>{
+  const b = e.target.closest && e.target.closest('[data-remove-media]');
+  if(!b) return;
+  const kind = b.dataset.removeMedia;
+  if(kind==='feed'){ pendingFeedFile = null; pendingFeedIsVideo = false; pendingFeedPreviewHtml = ''; }
+  else { pendingTributeFile = null; pendingTributeIsVideo = false; pendingTributePreviewHtml = ''; }
+  const w = document.getElementById(kind==='feed' ? 'feedImgPreviewWrap' : 'tributeImgPreviewWrap');
+  if(w) w.innerHTML = '';
+  clearMediaDraft(kind);
+});
+async function restoreMediaDrafts(){
+  let restored = [];
+  for(const kind of ['feed','tribute']){
+    const d = await loadMediaDraft(kind);
+    if(!d || !d.blob) continue;
+    if(Date.now() - (d.savedAt||0) > MEDIA_DRAFT_MAX_AGE){ clearMediaDraft(kind); continue; }
+    if(kind==='feed' ? pendingFeedFile : pendingTributeFile) continue;
+    const f = (d.blob instanceof File) ? d.blob : new File([d.blob], d.name || (d.isVideo?'video':'photo'), {type: d.type || d.blob.type});
+    await attachPendingMedia(f, kind, true);
+    restored.push((d.isVideo ? 'video' : 'photo') + (kind==='feed' ? ' on the Feed' : ' on the Tribute Wall'));
+  }
+  let cameraTs = 0;
+  try{ cameraTs = parseInt(localStorage.getItem(CAMERA_FLAG_KEY) || '0', 10); }catch(e){}
+  clearCameraFlag();
+  if(restored.length){
+    render();
+    showToast('Unsent ' + restored.join(' and ') + ' restored. Tap Post to send it.', 6000);
+  } else if(cameraTs && Date.now() - cameraTs < 10*60*1000){
+    showToast("Your phone closed the app while the camera was open, so that photo didn't come through. Tip: take it with your camera app, then use Add photo/video → Upload.", 9000);
+  }
+}
+
+/* ---------------------------------------------------------
    PHOTO HOSTING (Cloudinary)
    window.storage caps out at 20MB total, which a season of
    20 people posting photos would blow through fast. So photos
@@ -4144,6 +4266,13 @@ let pendingTributeIsVideo = false;
 const CLOUDINARY_CLOUD_NAME = 'kp3eoza3';
 const CLOUDINARY_UPLOAD_PRESET = 'TheJoey';
 
+// Give up on a stuck upload (weak course signal) instead of hanging forever.
+async function fetchWithTimeout(url, opts, ms){
+  const ctl = new AbortController();
+  const timer = setTimeout(()=>ctl.abort(), ms);
+  try{ return await fetch(url, {...opts, signal: ctl.signal}); }
+  finally{ clearTimeout(timer); }
+}
 async function uploadPhoto(file, maxW=1280, quality=0.8){
   const dataUrl = await resizeImage(file, maxW, quality);
   const blob = await (await fetch(dataUrl)).blob();
@@ -4152,10 +4281,10 @@ async function uploadPhoto(file, maxW=1280, quality=0.8){
   form.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
   // client-generated unique id so same-named phone photos (IMG_1234.jpg) never collide
   form.append('public_id', 'joey-' + uid() + '-' + Date.now());
-  const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
+  const res = await fetchWithTimeout(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
     method: 'POST',
     body: form
-  });
+  }, 45000);
   if(!res.ok) throw new Error('Cloudinary upload failed: '+res.status);
   const data = await res.json();
   return data.secure_url;
@@ -4167,10 +4296,10 @@ async function uploadVideo(file){
   form.append('file', file);
   form.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
   form.append('public_id', 'joey-' + uid() + '-' + Date.now());
-  const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/video/upload`, {
+  const res = await fetchWithTimeout(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/video/upload`, {
     method: 'POST',
     body: form
-  });
+  }, 180000);
   if(!res.ok) throw new Error('Cloudinary video upload failed: '+res.status);
   const data = await res.json();
   return data.secure_url;
@@ -4706,27 +4835,7 @@ function attachHandlers(){
   document.querySelectorAll('[data-filter-tag]').forEach(el=>{
     el.onclick = ()=>{ feedFilterTag = el.dataset.filterTag; render(); };
   });
-  async function handleMediaFileSelected(f, kind){
-    if(!f) return;
-    const isVideo = f.type.startsWith('video/');
-    const previewWrapId = kind==='feed' ? 'feedImgPreviewWrap' : 'tributeImgPreviewWrap';
-    if(kind==='feed'){ pendingFeedFile = f; pendingFeedIsVideo = isVideo; }
-    else { pendingTributeFile = f; pendingTributeIsVideo = isVideo; }
-    // small local preview only — the real upload happens on Post, so an
-    // abandoned draft never wastes a Cloudinary upload
-    if(isVideo){
-      if(f.size > 60*1024*1024) showToast("That's a big video — upload may take a while on course wifi");
-      const objUrl = URL.createObjectURL(f);
-      setPreview(`<video src="${objUrl}" controls playsinline style="width:100%;border-radius:8px;margin-top:6px;"></video>`);
-    } else {
-      const previewUrl = await resizeImage(f, 500, 0.6);
-      setPreview(`<img src="${previewUrl}" style="width:100%;border-radius:8px;margin-top:6px;">`);
-    }
-    function setPreview(html){
-      if(kind==='feed') pendingFeedPreviewHtml = html; else pendingTributePreviewHtml = html;
-      const w = document.getElementById(previewWrapId); if(w) w.innerHTML = html;
-    }
-  }
+  const handleMediaFileSelected = (f, kind)=> attachPendingMedia(f, kind, false);
 
   function wireMediaButton(btnId, photoInputId, videoInputId, uploadInputId, kind){
     const btn = document.getElementById(btnId);
@@ -4795,9 +4904,16 @@ function attachHandlers(){
 
   const feedPostBtn = document.getElementById('feedPostBtn');
   if(feedPostBtn) feedPostBtn.onclick = async ()=>{
+    // one post at a time: a second tap while a photo is still uploading
+    // (slow on course signal) used to create a duplicate post
+    if(feedPosting) return;
     const text = document.getElementById('feedText').value.trim();
     if(!text && !pendingFeedFile){ showToast('Write something or add a photo/video'); return; }
     if(!myName){ document.getElementById('nameGate').style.display='flex'; return; }
+    feedPosting = true;
+    const setBtn = (busy)=>{ const b = document.getElementById('feedPostBtn'); if(b){ b.disabled = busy; if(busy) b.textContent = 'Posting…'; else b.innerHTML = 'Post'; } };
+    setBtn(true);
+    try{
     let imgUrl = null, videoUrl = null;
     if(pendingFeedFile){
       showToast(pendingFeedIsVideo ? 'Uploading video…' : 'Uploading photo…');
@@ -4809,7 +4925,7 @@ function attachHandlers(){
         }
       }catch(err){
         console.error(err);
-        showToast(`Couldn't upload ${pendingFeedIsVideo?'video':'photo'} — try posting again`);
+        showToast(`Couldn't upload — weak signal? Your ${pendingFeedIsVideo?'video':'photo'} is still attached. Tap Post to try again.`, 6000);
         return;
       }
     }
@@ -4822,15 +4938,24 @@ function attachHandlers(){
     document.getElementById('feedImgPreviewWrap').innerHTML = '';
     document.getElementById('feedText').value = '';
     await savePost(newPost, 'feed-post:');
+    clearMediaDraft('feed');
+    }finally{ feedPosting = false; setBtn(false); }
     render();
   };
 
   // tribute
   const tributePostBtn = document.getElementById('tributePostBtn');
   if(tributePostBtn) tributePostBtn.onclick = async ()=>{
+    // one post at a time: a second tap while a photo is still uploading
+    // (slow on course signal) used to create a duplicate post
+    if(tributePosting) return;
     const text = document.getElementById('tributeText').value.trim();
     if(!text && !pendingTributeFile){ showToast('Write something or add a photo/video'); return; }
     if(!myName){ document.getElementById('nameGate').style.display='flex'; return; }
+    tributePosting = true;
+    const setBtn = (busy)=>{ const b = document.getElementById('tributePostBtn'); if(b){ b.disabled = busy; if(busy) b.textContent = 'Posting…'; else b.innerHTML = 'Post <span aria-hidden="true">›</span>'; } };
+    setBtn(true);
+    try{
     let imgUrl = null, videoUrl = null;
     if(pendingTributeFile){
       showToast(pendingTributeIsVideo ? 'Uploading video…' : 'Uploading photo…');
@@ -4842,7 +4967,7 @@ function attachHandlers(){
         }
       }catch(err){
         console.error(err);
-        showToast(`Couldn't upload ${pendingTributeIsVideo?'video':'photo'} — try posting again`);
+        showToast(`Couldn't upload — weak signal? Your ${pendingTributeIsVideo?'video':'photo'} is still attached. Tap Post to try again.`, 6000);
         return;
       }
     }
@@ -4854,6 +4979,8 @@ function attachHandlers(){
     document.getElementById('tributeImgPreviewWrap').innerHTML = '';
     document.getElementById('tributeText').value = '';
     await savePost(newTribute, 'tribute-post:');
+    clearMediaDraft('tribute');
+    }finally{ tributePosting = false; setBtn(false); }
     render();
   };
 
@@ -5516,6 +5643,7 @@ function safeToAutoReload(){
     .some(el => el.value && el.value.trim());
   if(typed) return false;
   if(pendingFeedFile || pendingTributeFile) return false;
+  if(cameraRecentlyOpened()) return false;   // just back from the camera; file may not be attached yet
   if(typeof quickUndoState !== 'undefined' && quickUndoState) return false;
   // never auto-reload twice within 10 minutes (guards against a CDN
   // briefly serving mixed versions right after a push)
@@ -5626,6 +5754,7 @@ if(window.matchMedia('(display-mode: standalone)').matches || window.navigator.s
   checkNameGate();
   updateAdminUI();
   render();
+  restoreMediaDrafts();
   startScoreListener();
   retryPendingScores();
   updateSyncBadge();
