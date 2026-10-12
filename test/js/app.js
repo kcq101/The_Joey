@@ -206,12 +206,12 @@ document.addEventListener('click', async (e)=>{
   if(!ok){ b.disabled = false; b.textContent = 'Tap to retry'; showToast('Still can\'t reach the database'); }
 });
 
-async function loadAll(){
+/* Everything that belongs to the year being viewed. Called at startup
+   and again whenever the year switcher changes years. */
+async function loadYearData(includeLegacy){
   await loadTeamsAndGroups(2);
 
-  scores = await loadAllScores(true);
-
-  holesConfig = await loadAllHoles();
+  scores = await loadAllScores(includeLegacy);
 
   try{
     const c = await window.storage.get('contests', true);
@@ -225,9 +225,9 @@ async function loadAll(){
   if(!extraContests){
     // first time ever loading, or storage isn't available yet (e.g. unpublished
     // preview) -- seed the default Practice Green contest either way so it's
-    // never just missing
+    // never just missing. Past years are read-only, so only seed in memory there.
     extraContests = [{id:'golden-boy', name:'The Golden Boy', location:'Practice Green', winner:'', distance:'', finalized:false}];
-    try{ await save('extra-contests', JSON.stringify(extraContests), true); }catch(e){}
+    if(!viewingPastYear()){ try{ await save('extra-contests', JSON.stringify(extraContests), true); }catch(e){} }
   }
 
   try{
@@ -238,6 +238,22 @@ async function loadAll(){
     const cl = await window.storage.get('contests-locked', true);
     contestsLocked = cl ? cl.value === 'true' : false;
   }catch(e){ contestsLocked = false; }
+
+  try{
+    const y = await window.storage.get('hero-year', true);
+    heroYearText = y ? y.value : `TOURNAMENT · ${TOURNAMENT_YEAR}`;
+  }catch(e){}
+  try{
+    const ei = await window.storage.get('event-info', true);
+    // in year mode each year has its own details; don't carry another year's over
+    const base = window.storage.yearMode() ? {venue:'', date:'', note:''} : eventInfo;
+    eventInfo = (ei && ei.value) ? {...base, ...JSON.parse(ei.value)} : base;
+  }catch(e){}
+}
+
+async function loadAll(){
+  await loadYearData(true);
+  holesConfig = await loadAllHoles();
 
   try{
     const aps = await window.storage.get('auto-post-settings', true);
@@ -274,20 +290,12 @@ async function loadAll(){
   }catch(e){ champions = []; }
 
   try{
-    const y = await window.storage.get('hero-year', true);
-    heroYearText = y ? y.value : heroYearText;
-  }catch(e){}
-  try{
     const mt = await window.storage.get('memorial-title', true);
     if(mt && mt.value) memorialTitle = mt.value;
   }catch(e){}
   try{
     const ht = await window.storage.get('hero-text', true);
     if(ht && ht.value) heroText = {...heroText, ...JSON.parse(ht.value)};
-  }catch(e){}
-  try{
-    const ei = await window.storage.get('event-info', true);
-    if(ei && ei.value) eventInfo = {...eventInfo, ...JSON.parse(ei.value)};
   }catch(e){}
 
   try{
@@ -369,6 +377,7 @@ function applyPendingScores(target){
   });
 }
 function saveHoleScore(tid, hole){
+  if(viewingPastYear()){ showToast(`${TOURNAMENT_YEAR} is a previous year. Scores are view-only.`); return; }
   if(scoresLocked){ showToast('Scores are final — ask an admin to unlock'); return; }
   const key = tid + '|' + hole;
   const val = (scores[tid] && scores[tid][hole]) || 0;
@@ -1300,7 +1309,7 @@ function renderEventInfo(){
     eventInfo.note  && ['dine', eventInfo.note],
   ].filter(Boolean);
   el.innerHTML = (facts.length ? `<div class="hero-facts">${facts.map(([k,t])=>`<div class="hero-fact"><span class="hero-fact-ico">${ICON[k]}</span><span>${escapeHtml(t).replace(/ (\S+)$/, '&nbsp;$1')}</span></div>`).join('')}</div>` : '')
-    + (isAdminSession ? `<button class="tiny-btn" id="editEventInfoBtn" type="button">Edit event details</button>` : '');
+    + (isAdminSession && !viewingPastYear() ? `<button class="tiny-btn" id="editEventInfoBtn" type="button">Edit event details</button>` : '');
   const yr = document.getElementById('heroWordmarkYear'); if(yr) yr.textContent = ' · ' + TOURNAMENT_YEAR;
 }
 document.addEventListener('click', async (e)=>{
@@ -1398,7 +1407,7 @@ function renderLeaderboard(){
         <div class="sign-beam"><div class="sign-beam-gold-strip"></div></div>
         <div class="sign-pole"></div>
         <div class="sign-ground-shadow"></div>
-        <div class="board-title">The Joey<span class="board-title-year">${TOURNAMENT_YEAR}</span></div>
+        <div class="board-title">The Joey${hasMultipleYears() ? yearSwitchChip() : `<span class="board-title-year">${TOURNAMENT_YEAR}</span>`}</div>
         ${teamsLoadFailed ? teamsLoadErrorHtml() : `<div class="empty" style="padding:14px 4px 20px;">No teams yet — set up team pairings from the Scorecard tab to get things rolling.</div>`}
       </div>
     </div>`;
@@ -1410,7 +1419,7 @@ function renderLeaderboard(){
         <div class="sign-beam"><div class="sign-beam-gold-strip"></div></div>
         <div class="sign-pole"></div>
         <div class="sign-ground-shadow"></div>
-        <div class="board-title">The Joey<span class="board-title-year">${TOURNAMENT_YEAR}</span></div>
+        <div class="board-title">The Joey${hasMultipleYears() ? yearSwitchChip() : `<span class="board-title-year">${TOURNAMENT_YEAR}</span>`}</div>
         <div class="board-head">
           <span class="bh-pos"></span>
           <span class="bh-team">Team</span>
@@ -1499,12 +1508,12 @@ function contestRowIcon(name){
 }
 
 function renderContestSummary(){
-  const canSetWinners = isAdminSession || (myRole==='player' && !contestsLocked);
+  const canSetWinners = !viewingPastYear() && (isAdminSession || (myRole==='player' && !contestsLocked));
 
   function winnerCell(winner, finalized, actionAttr, declareAttr, reopenAttr){
     if(finalized){
       return `<span class="contest-winner-pill winner-final">🏆 ${escapeHtml(winner)}</span>`
-        + (isAdminSession ? `<button class="tiny-btn" ${reopenAttr}>Reopen</button>` : '');
+        + (isAdminSession && !viewingPastYear() ? `<button class="tiny-btn" ${reopenAttr}>Reopen</button>` : '');
     }
     if(winner){
       const pill = canSetWinners
@@ -1559,7 +1568,7 @@ function renderContestSummary(){
     </div>`;
   }).join('');
 
-  const lockToggleHtml = isAdminSession ? `
+  const lockToggleHtml = (isAdminSession && !viewingPastYear()) ? `
     <button class="tiny-btn" id="toggleContestLockBtn" style="margin-top:10px;display:block;">
       ${contestsLocked ? '🔒 Winners locked — tap to allow player edits' : '🔓 Players can set winners — tap to lock'}
     </button>` : '';
@@ -1571,7 +1580,7 @@ function renderContestSummary(){
     ${holeContests}
     ${extraHtml}
     </div>
-    ${isAdminSession ? `<button class="tiny-btn" id="addExtraContestBtn" style="margin-top:10px;">+ Add side contest</button>` : ''}
+    ${isAdminSession && !viewingPastYear() ? `<button class="tiny-btn" id="addExtraContestBtn" style="margin-top:10px;">+ Add side contest</button>` : ''}
     ${lockToggleHtml}
     </div>
   </div>`;
@@ -1581,6 +1590,7 @@ function renderContestSummary(){
    SCORECARD
 --------------------------------------------------------- */
 function lockBannerHtml(){
+  if(viewingPastYear()) return `<div class="card lock-banner"><div>🏁 <b>${TOURNAMENT_YEAR} final results</b> — view only.</div></div>`;
   if(!scoresLocked) return '';
   return `<div class="card lock-banner">
     <div>🏁 <b>Final results</b> — scores are locked.</div>
@@ -1591,8 +1601,13 @@ function renderScorecard(){
   if(!isAdminSession){
     // players/guests get a locked-down, single-purpose scorecard --
     // no team switching, no group filter, no access to team setup
+    if(viewingPastYear()){
+      // your saved team belongs to the current year, not this one
+      return lockBannerHtml() + `<div class="card"><div class="empty">Every team's ${TOURNAMENT_YEAR} card is on the Leaderboard. Tap a team there to see it hole by hole.</div></div>`;
+    }
     return lockBannerHtml() + renderScoreEntry();
   }
+  if(viewingPastYear()) return lockBannerHtml() + renderScoreEntry();
   const content = scorecardMode==='manage' ? renderTeamManager() : renderScoreEntry();
   const modeSwitch = `
     <div class="card">
@@ -1631,7 +1646,7 @@ function renderScoreEntry(){
     </button>`).join('');
 
   const team = teams.find(t=>t.id===scoreboardSelectedTeam);
-  const canEditTeam = !scoresLocked && (isAdminSession || (myRole==='player' && myTeamId===team?.id));
+  const canEditTeam = !scoresLocked && !viewingPastYear() && (isAdminSession || (myRole==='player' && myTeamId===team?.id));
   const isYourTeamView = myRole==='player' && team && myTeamId===team.id;
   let gridHtml = '';
   if(team){
@@ -1903,10 +1918,10 @@ function renderHoles(idxOverride){
   const contestLabel = h.contestName || (h.contestType==='ctp' ? 'Closest to the Pin' : h.contestType==='longdrive' ? 'Longest Drive' : null);
   let contestHtml = '';
   if(contestLabel){
-    const canSet = isAdminSession || (myRole==='player' && !contestsLocked);
+    const canSet = !viewingPastYear() && (isAdminSession || (myRole==='player' && !contestsLocked));
     let actionHtml;
     if(contest.finalized){
-      actionHtml = isAdminSession ? `<button class="tiny-btn" data-reopen-contest="${h.number}">Reopen</button>` : '';
+      actionHtml = (isAdminSession && !viewingPastYear()) ? `<button class="tiny-btn" data-reopen-contest="${h.number}">Reopen</button>` : '';
     } else if(contest.winner){
       actionHtml = `<div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end;">
         ${canSet ? `<button class="btn small gold" data-set-contest="${h.number}">Update</button>` : ''}
@@ -2044,7 +2059,7 @@ function renderFeed(){
   const posts = visiblePosts.length===0
     ? `<div class="card"><div class="empty">${feedFilterTag==='all' ? 'No posts yet. Be the first to share a shot of the day.' : `No posts tagged #${feedFilterTag} yet.`}</div></div>`
     : `<div class="card">${visiblePosts.slice().reverse().map(renderPost).join('')}</div>`;
-  return adminAutoPostPanel + composer + filterHtml + posts;
+  return adminAutoPostPanel + composer + filterHtml + posts + renderPastFeeds();
 }
 function renderPost(post){
   const heartIcon = post.likedByMe
@@ -2175,7 +2190,7 @@ function renderJoe(){
       <div class="champ-list">${champRows}</div>
       ${isAdminSession ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;align-items:center;">
         <button class="btn secondary small" id="addChampBtn">+ Add champion</button>
-        <button class="btn gold small" id="declareChampionBtn">🏆 Declare This Year's Champions</button>
+        ${viewingPastYear() ? '' : `<button class="btn gold small" id="declareChampionBtn">🏆 Declare This Year's Champions</button>`}
       </div>
       <div style="display:flex;align-items:center;gap:10px;margin-top:10px;">
         ${trophyIconUrl ? `<img src="${trophyIconUrl}" style="width:36px;height:36px;border-radius:8px;object-fit:cover;border:1px solid var(--line);">` : ''}
@@ -3516,14 +3531,14 @@ function attachHandlers(){
   document.querySelectorAll('[data-like]').forEach(el=>{
     el.onclick = async ()=>{
       const id = el.dataset.like;
-      const isFeed = feedPosts.find(p=>p.id===id);
-      const post = isFeed || tributePosts.find(p=>p.id===id);
-      if(!post) return;
+      const loc = locatePost(id);
+      if(!loc) return;
+      const post = loc.post;
       post.likedBy = post.likedBy || {};
       if(post.likedBy[DEVICE_ID]) delete post.likedBy[DEVICE_ID]; else post.likedBy[DEVICE_ID] = true;
       refreshLikeFields(post);
       render();
-      await saveLike(post, isFeed ? 'feed-post:' : 'tribute-post:');
+      await saveLike(post, loc.prefix);
     };
   });
 
@@ -3549,13 +3564,13 @@ function attachHandlers(){
     const text = input.value.trim();
     if(!text) return;
     if(!myName){ document.getElementById('nameGate').style.display='flex'; return; }
-    const isFeed = feedPosts.find(p=>p.id===postId);
-    const post = isFeed || tributePosts.find(p=>p.id===postId);
-    if(!post) return;
+    const loc = locatePost(postId);
+    if(!loc) return;
+    const post = loc.post;
     if(!post.comments) post.comments = [];
     const newComment = {id:uid(), name:myName, text, time:Date.now()};
     post.comments.push(newComment);
-    await saveComment(post, isFeed ? 'feed-post:' : 'tribute-post:', newComment);
+    await saveComment(post, loc.prefix, newComment);
     expandedComments[postId] = true; // keep the thread open after replying
     render();
   }
@@ -3585,11 +3600,11 @@ function attachHandlers(){
       const box = el.closest('.post-edit-box');
       const input = box ? box.querySelector('.post-edit-input') : null;
       if(!input) return;
-      const isFeed = feedPosts.find(p=>p.id===id);
-      const post = isFeed || tributePosts.find(p=>p.id===id);
-      if(!post) return;
+      const loc = locatePost(id);
+      if(!loc) return;
+      const post = loc.post;
       post.text = input.value.trim();
-      await savePost(post, isFeed ? 'feed-post:' : 'tribute-post:');
+      await savePost(post, loc.prefix);
       editingPostId = null;
       render();
     };
@@ -3598,14 +3613,12 @@ function attachHandlers(){
     el.onclick = async ()=>{
       const id = el.dataset.deletePost;
       if(!confirm('Delete this post? This can\'t be undone.')) return;
-      const isFeed = feedPosts.find(p=>p.id===id);
-      if(isFeed){
-        feedPosts = feedPosts.filter(p=>p.id!==id);
-        await deletePost(id, 'feed-post:');
-      } else {
-        tributePosts = tributePosts.filter(p=>p.id!==id);
-        await deletePost(id, 'tribute-post:');
-      }
+      const loc = locatePost(id);
+      if(!loc) return;
+      if(loc.list === 'feed') feedPosts = feedPosts.filter(p=>p.id!==id);
+      else if(loc.list === 'tribute') tributePosts = tributePosts.filter(p=>p.id!==id);
+      else pastFeeds[loc.year].posts = pastFeeds[loc.year].posts.filter(p=>p.id!==id);
+      await deletePost(id, loc.prefix);
       render();
     };
   });
@@ -3626,13 +3639,13 @@ function attachHandlers(){
       if(!input) return;
       const text = input.value.trim();
       if(!text) return;
-      const isFeed = feedPosts.find(p=>p.id===postId);
-      const post = isFeed || tributePosts.find(p=>p.id===postId);
-      if(!post) return;
+      const loc = locatePost(postId);
+      if(!loc) return;
+      const post = loc.post;
       const comment = (post.comments||[]).find(c=>c.id===commentId);
       if(!comment) return;
       comment.text = text;
-      await saveComment(post, isFeed ? 'feed-post:' : 'tribute-post:', comment);
+      await saveComment(post, loc.prefix, comment);
       editingCommentId = null;
       render();
     };
@@ -3642,11 +3655,11 @@ function attachHandlers(){
       const commentId = el.dataset.deleteComment;
       const postId = el.dataset.commentPost;
       if(!confirm('Delete this reply?')) return;
-      const isFeed = feedPosts.find(p=>p.id===postId);
-      const post = isFeed || tributePosts.find(p=>p.id===postId);
-      if(!post) return;
+      const loc = locatePost(postId);
+      if(!loc) return;
+      const post = loc.post;
       post.comments = (post.comments||[]).filter(c=>c.id!==commentId);
-      await removeComment(post, isFeed ? 'feed-post:' : 'tribute-post:', commentId);
+      await removeComment(post, loc.prefix, commentId);
       render();
     };
   });
@@ -4269,38 +4282,188 @@ if(window.matchMedia('(display-mode: standalone)').matches || window.navigator.s
 }
 /* ---------------------------------------------------------
    TOURNAMENT YEARS
-   The year comes from the app-config doc (see storage.js). Before
-   the 2026 migration runs there is no config, the app reads the
-   original shared collection, and the year stays 2026 -- so this
-   code behaves exactly like the old app until an admin migrates.
+   The current year comes from the app-config doc (see storage.js)
+   and is what everyone sees on opening the app. Anyone can switch
+   to look at a previous year for this session; that view is
+   read-only for scores, teams and contests (feed likes and replies
+   still work). Before the 2026 migration there is no config and the
+   app behaves exactly like the old single-year app.
 --------------------------------------------------------- */
+function viewingPastYear(){
+  return !!(window.storage && window.storage.viewingPast && window.storage.viewingPast());
+}
 function applyTournamentYear(){
   const y = window.storage.activeYear && window.storage.activeYear();
   if(y){
     TOURNAMENT_YEAR = y;
-    heroYearText = `TOURNAMENT · ${y}`;   // a saved per-year hero-year still overrides this in loadAll()
+    heroYearText = `TOURNAMENT · ${y}`;   // a saved per-year hero-year overrides this in loadYearData()
   }
   const pill = document.getElementById('testModePill');
   if(pill) pill.style.display = window.storage.testMode ? '' : 'none';
+  paintYearChrome();
 }
+// Header year label + "Viewing Previous Year" banner
+function paintYearChrome(){
+  const scYear = document.getElementById('scorecardYear');
+  if(scYear) scYear.innerHTML = hasMultipleYears() ? yearSwitchChip() : '🚩 ' + TOURNAMENT_YEAR;
+  const banner = document.getElementById('pastYearBanner');
+  if(banner){
+    const past = viewingPastYear();
+    banner.style.display = past ? '' : 'none';
+    if(past){
+      document.getElementById('pastYearLabel').textContent = TOURNAMENT_YEAR;
+      document.getElementById('backToCurrentBtn').textContent = `Back to ${window.storage.currentYear()}`;
+    }
+  }
+  document.body.classList.toggle('viewing-past-year', viewingPastYear());
+}
+function hasMultipleYears(){
+  return window.storage.yearMode && window.storage.yearMode() && window.storage.years().length > 1;
+}
+// Small tappable year chip used in headers when more than one year exists
+function yearSwitchChip(){
+  if(!hasMultipleYears()) return '';
+  return `<button class="year-switch-chip" data-year-switch type="button" aria-label="Change tournament year">${TOURNAMENT_YEAR} ▾</button>`;
+}
+let yearSwitchInFlight = false;
+async function switchYear(y){
+  y = Number(y);
+  if(yearSwitchInFlight || y === TOURNAMENT_YEAR) return;
+  yearSwitchInFlight = true;
+  showToast(`Loading ${y}…`);
+  try{
+    window.storage.setActiveYear(y);
+    TOURNAMENT_YEAR = y;
+    heroYearText = `TOURNAMENT · ${y}`;
+    expandedLbRows = {};
+    scorecardMode = 'score';
+    await loadYearData(false);
+    startScoreListener();   // re-points the live score listener at this year
+    // a player's own scorecard belongs to the current year; send them to the
+    // leaderboard when looking back
+    if(viewingPastYear() && currentTab === 'scorecard' && !isAdminSession) switchTab('leaderboard', true);
+    paintYearChrome();
+    render();
+    showToast(viewingPastYear() ? `Viewing ${y}` : `Back to ${y}`);
+  }catch(e){
+    console.error('year switch failed', e);
+    showToast(`Couldn't load ${y}. Check your connection.`);
+  }finally{
+    yearSwitchInFlight = false;
+  }
+}
+function openYearSheet(){
+  const years = window.storage.years();
+  const cur = window.storage.currentYear();
+  let sheet = document.getElementById('yearSheet');
+  if(!sheet){
+    sheet = document.createElement('div');
+    sheet.id = 'yearSheet';
+    sheet.className = 'year-sheet-backdrop';
+    document.body.appendChild(sheet);
+    sheet.addEventListener('click', (e)=>{ if(e.target === sheet) sheet.remove(); });
+  }
+  sheet.innerHTML = `<div class="year-sheet" role="dialog" aria-label="Choose a tournament year">
+    <div class="year-sheet-title">Tournament year</div>
+    ${years.map(y=>`<button class="year-sheet-row ${y===TOURNAMENT_YEAR?'active':''}" data-pick-year="${y}" type="button">
+      <span>The Joey ${y}</span><span class="year-sheet-tag">${y===cur ? 'Current' : 'Previous'}</span></button>`).join('')}
+    <button class="tiny-btn" data-close-year-sheet type="button" style="margin-top:10px;">Close</button>
+  </div>`;
+  sheet.querySelectorAll('[data-pick-year]').forEach(b=>b.onclick = ()=>{ sheet.remove(); switchYear(b.dataset.pickYear); });
+  sheet.querySelector('[data-close-year-sheet]').onclick = ()=>sheet.remove();
+}
+document.addEventListener('click', (e)=>{
+  if(e.target.closest('[data-year-switch]')){ e.preventDefault(); e.stopPropagation(); openYearSheet(); }
+  if(e.target.closest('#backToCurrentBtn')){ switchYear(window.storage.currentYear()); }
+}, true);
+
+/* ---- Past-year feeds: collapsed sections under the current feed ----
+   Posts are read with a year-tagged prefix ("2026|feed-post:") so every
+   existing like/reply/edit helper saves back to that year unchanged. */
+let pastFeeds = {};   // { year: {open, loading, posts:[], failed} }
+function pastFeedPrefix(y){ return `${y}|feed-post:`; }
+async function loadPastFeed(y){
+  const pf = pastFeeds[y] = pastFeeds[y] || {open:true, posts:[]};
+  pf.loading = true; pf.failed = false;
+  render();
+  try{
+    const prefix = pastFeedPrefix(y);
+    const docs = await window.storage.listRaw(prefix);
+    pf.posts = docs.map(({data})=>postFromDoc(data, null)).filter(Boolean).sort((a,b)=>a.time-b.time);
+  }catch(e){
+    console.error('past feed load failed', y, e);
+    pf.failed = true;
+  }finally{
+    pf.loading = false;
+    feedRender();
+  }
+}
+function renderPastFeeds(){
+  if(!(window.storage.yearMode && window.storage.yearMode())) return '';
+  const cur = window.storage.currentYear();
+  return window.storage.years().filter(y=>y !== cur).map(y=>{
+    const pf = pastFeeds[y] || {};
+    const count = (pf.posts && pf.posts.length) ? ` · ${pf.posts.length} posts` : '';
+    const body = !pf.open ? '' : pf.loading ? `<div class="empty">Loading ${y}…</div>`
+      : pf.failed ? `<div class="empty">Couldn't load the ${y} feed. <button class="tiny-btn" data-past-feed="${y}" type="button">Try again</button></div>`
+      : pf.posts.length ? pf.posts.slice().reverse().map(renderPost).join('')
+      : `<div class="empty">No posts from ${y}.</div>`;
+    return `<div class="card past-feed ${pf.open ? 'open' : ''}">
+      <button class="past-feed-head" data-past-feed="${y}" type="button">
+        <span>${y} Tournament Feed${count}</span><span class="past-feed-caret">${pf.open ? '▾' : '▸'}</span>
+      </button>
+      ${body}
+    </div>`;
+  }).join('');
+}
+document.addEventListener('click', (e)=>{
+  const b = e.target.closest('[data-past-feed]');
+  if(!b) return;
+  const y = Number(b.dataset.pastFeed);
+  const pf = pastFeeds[y];
+  if(pf && pf.open && !pf.failed && !b.classList.contains('tiny-btn')){ pf.open = false; render(); return; }
+  if(pf && pf.posts && pf.posts.length && !pf.failed){ pf.open = true; render(); return; }
+  loadPastFeed(y);
+});
+// Find a post in the current feed, the Tribute Wall, or an open past feed,
+// along with the storage prefix its saves should use.
+function locatePost(id){
+  let post = feedPosts.find(p=>p.id===id);
+  if(post) return {post, prefix:'feed-post:', list:'feed'};
+  post = tributePosts.find(p=>p.id===id);
+  if(post) return {post, prefix:'tribute-post:', list:'tribute'};
+  for(const [y, pf] of Object.entries(pastFeeds)){
+    post = (pf.posts||[]).find(p=>p.id===id);
+    if(post) return {post, prefix: pastFeedPrefix(y), list:'past', year:Number(y)};
+  }
+  return null;
+}
+
+/* ---- Admin: years panel ---- */
 function paintYearsAdmin(){
   const st = window.storage;
   const status = document.getElementById('yearsStatus');
   if(!status) return;
   const cfg = st.config();
   const where = st.testMode ? 'Test copy: reading and writing test data only.' : 'Live data.';
-  if(st.yearMode()){
+  const yearMode = st.yearMode();
+  if(yearMode){
     const yrs = Object.entries(cfg.years || {}).sort(([a],[b])=>b-a)
       .map(([y, v])=>`${y}${v && v.status==='final' ? ' (Final)' : ''}`).join(', ');
     status.textContent = `${where} Current year: ${cfg.currentYear}. Years: ${yrs}.`;
   } else {
     status.textContent = `${where} Not set up yet. Everything still reads the original single collection.`;
   }
-  document.getElementById('migrateYearBtn').style.display = st.yearMode() ? 'none' : '';
+  document.getElementById('migrateYearBtn').style.display = yearMode ? 'none' : '';
+  document.getElementById('yearsManage').style.display = yearMode ? '' : 'none';
+  if(yearMode){
+    const sel = document.getElementById('currentYearSelect');
+    sel.innerHTML = st.years().map(y=>`<option value="${y}" ${y===st.currentYear()?'selected':''}>${y}</option>`).join('');
+  }
   document.getElementById('resetTestBtn').style.display = st.testMode ? '' : 'none';
   // Start Fresh wipes the current year's scores and feed; once years
   // exist, a new year replaces it, so it is hidden to protect the archive.
-  document.getElementById('startFreshSection').style.display = st.yearMode() ? 'none' : '';
+  document.getElementById('startFreshSection').style.display = yearMode ? 'none' : '';
 }
 function wireYearsAdmin(){
   paintYearsAdmin();
@@ -4322,6 +4485,44 @@ function wireYearsAdmin(){
       alert('The copy did not finish: ' + (e && e.message ? e.message : e) + '\n\nNothing in the original data was changed.');
       migrateBtn.disabled = false;
       migrateBtn.textContent = '📦 Copy 2026 into its own year';
+    }
+  };
+  document.getElementById('createYearBtn').onclick = async ()=>{
+    if(!isAdminSession) return;
+    const years = window.storage.years();
+    const next = (years[0] || TOURNAMENT_YEAR) + 1;
+    const input = prompt('Which year are you setting up?', String(next));
+    if(input === null) return;
+    const y = parseInt(input, 10);
+    if(!(y >= 2000 && y <= 2100)){ alert('Enter a 4-digit year, like ' + next + '.'); return; }
+    if(years.includes(y)){ alert(`${y} already exists.`); return; }
+    // event details for the new year; course carries over automatically
+    const venue = prompt(`${y} course / location:`, eventInfo.venue || 'Downingtown Country Club'); if(venue === null) return;
+    const date  = prompt(`${y} date (e.g. Friday, October 8):`, ''); if(date === null) return;
+    const note  = prompt(`${y} note (e.g. dinner plans):`, eventInfo.note || ''); if(note === null) return;
+    try{
+      await window.storage.createYear(y);
+      await window.storage.setForYear(y, 'event-info', JSON.stringify({venue: venue.trim(), date: date.trim(), note: note.trim()}));
+      await window.storage.setForYear(y, 'hero-year', `TOURNAMENT · ${y}`);
+      const makeCurrent = confirm(`${y} is set up.\n\nMake ${y} the current year now? Everyone will open the app to ${y}.\n\n(Cancel keeps ${window.storage.currentYear()} as current; you can switch later.)`);
+      if(makeCurrent) await window.storage.setCurrentYear(y);
+      alert(makeCurrent ? `${y} is now the current year. The app will reload.` : `${y} created. The app will reload.`);
+      location.reload();
+    }catch(e){
+      alert('Could not create the year: ' + (e && e.message ? e.message : e));
+    }
+  };
+  document.getElementById('setCurrentYearBtn').onclick = async ()=>{
+    if(!isAdminSession) return;
+    const y = Number(document.getElementById('currentYearSelect').value);
+    if(y === window.storage.currentYear()){ showToast(`${y} is already the current year`); return; }
+    if(!confirm(`Make ${y} the current year?\n\nEveryone will open the app to ${y}.`)) return;
+    try{
+      await window.storage.setCurrentYear(y);
+      alert(`${y} is now the current year. The app will reload.`);
+      location.reload();
+    }catch(e){
+      alert('Could not change the current year: ' + (e && e.message ? e.message : e));
     }
   };
   const resetBtn = document.getElementById('resetTestBtn');
@@ -4363,8 +4564,7 @@ function wireYearsAdmin(){
   retryPendingScores();
   updateSyncBadge();
   document.getElementById('syncBadge').onclick = retryPendingScores;
-  const scYear = document.getElementById('scorecardYear');
-  if(scYear) scYear.textContent = '🚩 ' + TOURNAMENT_YEAR;
+  paintYearChrome();
   const bootLoading = document.getElementById('bootLoading');
   if(bootLoading) bootLoading.remove();
 

@@ -97,11 +97,40 @@ window.devStore = (function(){
 
     const globalCol = ()=>collection(db, GLOBAL);
     const yearCol = (y)=>collection(db, YEARS, String(y), 'data');
-    const colFor = (key)=> (yearMode() && isYearKey(key)) ? yearCol(activeYear) : globalCol();
-    const docFor = (key)=> doc(colFor(key), key);
-    const prefixQuery = (col, prefix)=>query(col,
-      where(documentId(), '>=', prefix),
-      where(documentId(), '<', prefix + ''));
+    const currentYearNum = ()=> config ? Number(config.currentYear) : null;
+    // A key may carry an explicit year tag, "2026|feed-post:abc", used for
+    // past-year feed posts so likes/replies save back to the right year.
+    const parseKey = (raw)=>{
+      const m = /^(\d{4})\|(.*)$/.exec(raw);
+      return m ? {year: Number(m[1]), key: m[2]} : {year: null, key: raw};
+    };
+    // Routing:
+    //  - explicit year tag  -> that year
+    //  - feed posts         -> the CURRENT year (the Feed tab always shows it;
+    //                          past feeds are read with explicit tags)
+    //  - other year data    -> the year being viewed
+    //  - everything else    -> the shared collection
+    const colFor = (raw)=>{
+      const {year, key} = parseKey(raw);
+      if(!yearMode() || !isYearKey(key)) return globalCol();
+      if(year) return yearCol(year);
+      if(key.startsWith('feed-post') ) return yearCol(currentYearNum());
+      return yearCol(activeYear);
+    };
+    const docFor = (raw)=> doc(colFor(raw), parseKey(raw).key);
+    const prefixQuery = (col, prefix)=>{
+      const p = parseKey(prefix).key;
+      return query(col, where(documentId(), '>=', p), where(documentId(), '<', p + ''));
+    };
+    // Past years are read-only for scores, teams, contests, and banner.
+    // Feed posts (likes, replies) stay writable in every year.
+    const viewingPast = ()=> yearMode() && activeYear !== currentYearNum();
+    const assertWritable = (raw)=>{
+      const {key} = parseKey(raw);
+      if(viewingPast() && isYearKey(key) && !key.startsWith('feed-post')){
+        throw new Error(`${activeYear} is a previous year and is read-only`);
+      }
+    };
 
     window.storage = {
       async get(key, shared){
@@ -118,6 +147,7 @@ window.devStore = (function(){
           devStore.setItem('personal:' + key, value);
           return {key, value, shared:false};
         }
+        assertWritable(key);
         await setDoc(docFor(key), {value, updatedAt: Date.now()});
         return {key, value, shared:true};
       },
@@ -126,6 +156,7 @@ window.devStore = (function(){
           devStore.removeItem('personal:' + key);
           return {key, deleted:true, shared:false};
         }
+        assertWritable(key);
         await deleteDoc(docFor(key));
         return {key, deleted:true, shared:true};
       },
@@ -167,11 +198,13 @@ window.devStore = (function(){
     };
     const scoreQuery = ()=>prefixQuery(colFor('team-score:'), 'team-score:');
     window.storage.scoreSetHole = async (tid, hole, val)=>{
+      assertWritable('team-score:'+tid);
       await setDoc(docFor('team-score:'+tid),
         {holes: {[String(hole)]: val ? val : deleteField()}, updatedAt: Date.now()},
         {merge:true});
     };
     window.storage.scoreReplaceAll = async (tid, holesObj)=>{
+      assertWritable('team-score:'+tid);
       await setDoc(docFor('team-score:'+tid),
         {holes: holesObj || {}, updatedAt: Date.now()});
     };
@@ -184,7 +217,7 @@ window.devStore = (function(){
         out[tid] = holes;
         // One-time upgrade: convert an old whole-scorecard doc into
         // per-hole fields (drops `value`), so clearing a hole sticks.
-        if(typeof d.data().value === 'string'){
+        if(typeof d.data().value === 'string' && !viewingPast()){
           setDoc(docFor(d.id), {holes, updatedAt: Date.now()})
             .catch(e=>console.error('score migrate failed', tid, e));
         }
@@ -212,14 +245,16 @@ window.devStore = (function(){
     // Merge only the given fields into a doc (nested maps merge too), so
     // a like or a comment never rewrites the rest of the post.
     window.storage.mergeDoc = async (key, fields)=>{
+      assertWritable(key);
       await setDoc(docFor(key), {...fields, updatedAt: Date.now()}, {merge:true});
     };
     window.storage.del = ()=>deleteField();
     // Every doc carries updatedAt (set on each write), so this returns only
     // what changed since the last check -- usually a handful of reads.
-    // In year mode it checks the shared collection and the viewed year.
+    // Used for the Feed and Tribute Wall, so in year mode it checks the
+    // shared collection and the CURRENT year (where the live feed is).
     window.storage.changedSince = async (ts)=>{
-      const cols = yearMode() ? [globalCol(), yearCol(activeYear)] : [globalCol()];
+      const cols = yearMode() ? [globalCol(), yearCol(currentYearNum())] : [globalCol()];
       const snaps = await Promise.all(cols.map(c=>getDocs(query(c, where('updatedAt', '>', ts)))));
       return snaps.flatMap(s=>s.docs.map(d=>({key: d.id, data: d.data()})));
     };
@@ -236,12 +271,32 @@ window.devStore = (function(){
     window.storage.testMode = TEST;
     window.storage.yearMode = yearMode;
     window.storage.config = ()=>config;
-    window.storage.currentYear = ()=> config ? Number(config.currentYear) : null;
+    window.storage.currentYear = currentYearNum;
     window.storage.activeYear = ()=>activeYear;
     window.storage.setActiveYear = (y)=>{ activeYear = Number(y); };
+    window.storage.viewingPast = viewingPast;
+    window.storage.years = ()=> Object.keys((config && config.years) || {}).map(Number).sort((a,b)=>b-a);
     window.storage.saveConfig = async (cfg)=>{
       await setDoc(doc(globalCol(), CONFIG_KEY), {value: JSON.stringify(cfg), updatedAt: Date.now()});
       config = cfg;
+    };
+    // Add a new tournament year (empty). Doesn't change the current year.
+    window.storage.createYear = async (y)=>{
+      y = Number(y);
+      if(!config) throw new Error('Set up years first (copy 2026 into its own year).');
+      if(config.years && config.years[y]) throw new Error(`${y} already exists.`);
+      await window.storage.saveConfig({...config, years: {...config.years, [y]: {status:'setup'}}});
+    };
+    // Which year everyone sees when they open the app.
+    window.storage.setCurrentYear = async (y)=>{
+      y = Number(y);
+      if(!config || !config.years || !config.years[y]) throw new Error(`${y} doesn't exist.`);
+      await window.storage.saveConfig({...config, currentYear: y});
+      activeYear = y;
+    };
+    // Write the year-scoped event details for a specific year (used by Create Year).
+    window.storage.setForYear = async (y, key, value)=>{
+      await setDoc(doc(yearCol(y), key), {value, updatedAt: Date.now()});
     };
 
     /* ---- One-time migration: copy a year out of the original flat
