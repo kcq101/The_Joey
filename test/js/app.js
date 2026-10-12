@@ -2058,7 +2058,15 @@ function renderFeed(){
   const posts = visiblePosts.length===0
     ? `<div class="card"><div class="empty">${feedFilterTag==='all' ? 'No posts yet. Be the first to share a shot of the day.' : `No posts tagged #${feedFilterTag} yet.`}</div></div>`
     : `<div class="card">${visiblePosts.slice().reverse().map(renderPost).join('')}</div>`;
-  return adminAutoPostPanel + composer + filterHtml + posts + renderPastFeeds();
+  // Current year's feed sits under its own collapsible header, styled like
+  // the past-year sections below it
+  const feedYear = (window.storage.currentYear && window.storage.currentYear()) || TOURNAMENT_YEAR;
+  const countLabel = feedPosts.length ? `<span class="past-feed-count"> · ${feedPosts.length} post${feedPosts.length===1?'':'s'}</span>` : '';
+  const currentHead = `<div class="card past-feed current-feed ${currentFeedOpen ? 'open' : ''}">
+    <button class="past-feed-head" data-current-feed type="button">
+      <span>${feedYear} Tournament Feed${countLabel}</span><span class="past-feed-caret">${currentFeedOpen ? '▾' : '▸'}</span>
+    </button></div>`;
+  return adminAutoPostPanel + currentHead + (currentFeedOpen ? composer + filterHtml + posts : '') + renderPastFeeds();
 }
 function renderPost(post){
   const heartIcon = post.likedByMe
@@ -4320,7 +4328,9 @@ function paintYearChrome(){
     const past = viewingPastYear();
     const locked = !past && scoresLocked && ['scorecard','leaderboard'].includes(currentTab);
     // the Joe tab shows the year in the event date instead of a banner
-    banner.style.display = ((past && currentTab !== 'joe') || locked) ? '' : 'none';
+    // Joe shows the year in the event date; Feed always shows the current
+    // year with past years below, so neither needs the banner
+    banner.style.display = ((past && !['joe','feed'].includes(currentTab)) || locked) ? '' : 'none';
     const main = document.getElementById('pastYearMain');
     const sub = document.getElementById('pastYearSub');
     const back = document.getElementById('backToCurrentBtn');
@@ -4404,6 +4414,12 @@ document.addEventListener('click', (e)=>{
    Posts are read with a year-tagged prefix ("2026|feed-post:") so every
    existing like/reply/edit helper saves back to that year unchanged. */
 let pastFeeds = {};   // { year: {open, loading, posts:[], failed} }
+let currentFeedOpen = true;   // current year's feed section (session only)
+document.addEventListener('click', (e)=>{
+  if(!e.target.closest('[data-current-feed]')) return;
+  currentFeedOpen = !currentFeedOpen;
+  render();
+});
 function pastFeedPrefix(y){ return `${y}|feed-post:`; }
 async function loadPastFeed(y){
   const pf = pastFeeds[y] = pastFeeds[y] || {open:true, posts:[]};
