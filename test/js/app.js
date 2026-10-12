@@ -4388,7 +4388,7 @@ function openYearSheet(){
   sheet.innerHTML = `<div class="year-sheet" role="dialog" aria-label="Choose a tournament year">
     <div class="year-sheet-title">Tournament year</div>
     ${years.map(y=>`<button class="year-sheet-row ${y===TOURNAMENT_YEAR?'active':''}" data-pick-year="${y}" type="button">
-      <span>The Joey ${y}</span><span class="year-sheet-tag">${y===cur ? 'Current' : 'Previous'}</span></button>`).join('')}
+      <span>The Joey ${y}</span><span class="year-sheet-tag">${y===cur ? 'Current' : y > cur ? 'Upcoming' : 'Previous'}</span></button>`).join('')}
     <button class="tiny-btn" data-close-year-sheet type="button" style="margin-top:10px;">Close</button>
   </div>`;
   sheet.querySelectorAll('[data-pick-year]').forEach(b=>b.onclick = ()=>{ sheet.remove(); switchYear(b.dataset.pickYear); });
