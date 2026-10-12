@@ -377,7 +377,7 @@ function applyPendingScores(target){
   });
 }
 function saveHoleScore(tid, hole){
-  if(viewingPastYear()){ showToast(`${TOURNAMENT_YEAR} is a previous year. Scores are view-only.`); return; }
+  if(viewingPastYear()){ showToast(viewingUpcomingYear() ? `${TOURNAMENT_YEAR} hasn't started yet. Scores open once it's the current year.` : `${TOURNAMENT_YEAR} is a previous year. Scores are view-only.`); return; }
   if(scoresLocked){ showToast('Scores are final — ask an admin to unlock'); return; }
   const key = tid + '|' + hole;
   const val = (scores[tid] && scores[tid][hole]) || 0;
@@ -1309,7 +1309,7 @@ function renderEventInfo(){
     eventInfo.note  && ['dine', eventInfo.note],
   ].filter(Boolean);
   el.innerHTML = (facts.length ? `<div class="hero-facts">${facts.map(([k,t])=>`<div class="hero-fact"><span class="hero-fact-ico">${ICON[k]}</span><span>${escapeHtml(t).replace(/ (\S+)$/, '&nbsp;$1')}</span></div>`).join('')}</div>` : '')
-    + (isAdminSession && !viewingPastYear() ? `<button class="tiny-btn" id="editEventInfoBtn" type="button">Edit event details</button>` : '');
+    + (canAdminEditYear() ? `<button class="tiny-btn" id="editEventInfoBtn" type="button">Edit event details</button>` : '');
   const yr = document.getElementById('heroWordmarkYear'); if(yr) yr.textContent = ' · ' + TOURNAMENT_YEAR;
 }
 document.addEventListener('click', async (e)=>{
@@ -1568,7 +1568,7 @@ function renderContestSummary(){
     </div>`;
   }).join('');
 
-  const lockToggleHtml = (isAdminSession && !viewingPastYear()) ? `
+  const lockToggleHtml = canAdminEditYear() ? `
     <button class="tiny-btn" id="toggleContestLockBtn" style="margin-top:10px;display:block;">
       ${contestsLocked ? '🔒 Winners locked — tap to allow player edits' : '🔓 Players can set winners — tap to lock'}
     </button>` : '';
@@ -1580,7 +1580,7 @@ function renderContestSummary(){
     ${holeContests}
     ${extraHtml}
     </div>
-    ${isAdminSession && !viewingPastYear() ? `<button class="tiny-btn" id="addExtraContestBtn" style="margin-top:10px;">+ Add side contest</button>` : ''}
+    ${canAdminEditYear() ? `<button class="tiny-btn" id="addExtraContestBtn" style="margin-top:10px;">+ Add side contest</button>` : ''}
     ${lockToggleHtml}
     </div>
   </div>`;
@@ -1603,11 +1603,13 @@ function renderScorecard(){
     // no team switching, no group filter, no access to team setup
     if(viewingPastYear()){
       // your saved team belongs to the current year, not this one
-      return lockBannerHtml() + `<div class="card"><div class="empty">Every team's ${TOURNAMENT_YEAR} card is on the Leaderboard. Tap a team there to see it hole by hole.</div></div>`;
+      return lockBannerHtml() + `<div class="card"><div class="empty">${viewingUpcomingYear()
+        ? `The ${TOURNAMENT_YEAR} tournament hasn't started yet. Scorecards open once it's the current year.`
+        : `Every team's ${TOURNAMENT_YEAR} card is on the Leaderboard. Tap a team there to see it hole by hole.`}</div></div>`;
     }
     return lockBannerHtml() + renderScoreEntry();
   }
-  if(viewingPastYear()) return lockBannerHtml() + renderScoreEntry();
+  if(viewingPastYear() && !viewingUpcomingYear()) return lockBannerHtml() + renderScoreEntry();
   const content = scorecardMode==='manage' ? renderTeamManager() : renderScoreEntry();
   const modeSwitch = `
     <div class="card">
@@ -4291,6 +4293,14 @@ if(window.matchMedia('(display-mode: standalone)').matches || window.navigator.s
 --------------------------------------------------------- */
 function viewingPastYear(){
   return !!(window.storage && window.storage.viewingPast && window.storage.viewingPast());
+}
+// A year after the current one: the admin can set it up (teams, groups,
+// event details, side contests), but nobody can enter scores yet.
+function viewingUpcomingYear(){
+  return viewingPastYear() && TOURNAMENT_YEAR > window.storage.currentYear();
+}
+function canAdminEditYear(){
+  return isAdminSession && (!viewingPastYear() || viewingUpcomingYear());
 }
 function applyTournamentYear(){
   const y = window.storage.activeYear && window.storage.activeYear();

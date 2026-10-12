@@ -125,10 +125,16 @@ window.devStore = (function(){
     // Past years are read-only for scores, teams, contests, and banner.
     // Feed posts (likes, replies) stay writable in every year.
     const viewingPast = ()=> yearMode() && activeYear !== currentYearNum();
+    // An UPCOMING year (after the current one) can be set up ahead of time --
+    // teams, groups, event details, side contests -- but never scored.
+    // The app only shows those setup controls to the admin.
+    const isScoreKey = (k)=> k.startsWith('team-score') || k === 'team-scores' || k === 'scores-locked';
     const assertWritable = (raw)=>{
       const {key} = parseKey(raw);
       if(viewingPast() && isYearKey(key) && !key.startsWith('feed-post')){
-        throw new Error(`${activeYear} is a previous year and is read-only`);
+        const upcoming = activeYear > currentYearNum();
+        if(upcoming && !isScoreKey(key)) return;
+        throw new Error(upcoming ? `${activeYear} hasn't started yet; scores are locked` : `${activeYear} is a previous year and is read-only`);
       }
     };
 
