@@ -1306,7 +1306,7 @@ function renderEventInfo(){
   };
   const facts = [
     eventInfo.venue && ['pin', eventInfo.venue],
-    eventInfo.date  && ['cal', eventInfo.date],
+    eventInfo.date  && ['cal', /\b\d{4}\b/.test(eventInfo.date) ? eventInfo.date : `${eventInfo.date}, ${TOURNAMENT_YEAR}`],
     eventInfo.note  && ['dine', eventInfo.note],
   ].filter(Boolean);
   el.innerHTML = (facts.length ? `<div class="hero-facts">${facts.map(([k,t])=>`<div class="hero-fact"><span class="hero-fact-ico">${ICON[k]}</span><span>${escapeHtml(t).replace(/ (\S+)$/, '&nbsp;$1')}</span></div>`).join('')}</div>` : '')
@@ -4319,7 +4319,8 @@ function paintYearChrome(){
     // current year with final scores locked (scorecard + leaderboard only).
     const past = viewingPastYear();
     const locked = !past && scoresLocked && ['scorecard','leaderboard'].includes(currentTab);
-    banner.style.display = (past || locked) ? '' : 'none';
+    // the Joe tab shows the year in the event date instead of a banner
+    banner.style.display = ((past && currentTab !== 'joe') || locked) ? '' : 'none';
     const main = document.getElementById('pastYearMain');
     const sub = document.getElementById('pastYearSub');
     const back = document.getElementById('backToCurrentBtn');
