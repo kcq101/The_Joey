@@ -1,11 +1,47 @@
 /* ---------------------------------------------------------
-   FIREBASE-BACKED STORAGE SHIM
-   Drop-in replacement for the window.storage API this app was
-   originally built against (get/set/delete/list, shared vs
-   personal). Every other line of app code below is unchanged --
-   it just talks to window.storage the same way it always did.
-   "shared" data lives in Firestore; "personal" (per-device) data
-   lives in localStorage, same scope it always had.
+   DEVICE STORAGE (localStorage) -- test-copy aware
+   The test copy runs on the same web address as the live app, so
+   both would otherwise share one phone's saved name, role, and
+   unsent-score queue. In test mode every device key gets a "test:"
+   prefix, so test scores can never replay into the live app.
+--------------------------------------------------------- */
+window.JOEY_TEST_MODE = /\/test(\/|$)/.test(location.pathname)
+  || new URLSearchParams(location.search).has('sandbox');
+window.devStore = (function(){
+  const P = window.JOEY_TEST_MODE ? 'test:' : '';
+  const ls = ()=>window.localStorage;
+  return {
+    getItem: (k)=>ls().getItem(P + k),
+    setItem: (k, v)=>ls().setItem(P + k, v),
+    removeItem: (k)=>ls().removeItem(P + k),
+    // every key this mode owns, with the mode prefix removed
+    keys(){
+      const out = [];
+      for(let i=0;i<ls().length;i++){
+        const k = ls().key(i);
+        if(!k) continue;
+        if(P){ if(k.startsWith(P)) out.push(k.slice(P.length)); }
+        else if(!k.startsWith('test:')) out.push(k);
+      }
+      return out;
+    }
+  };
+})();
+
+/* ---------------------------------------------------------
+   FIREBASE-BACKED STORAGE, YEAR-AWARE
+   Same get/set/delete/list API the app has always used. What's new:
+   - Year-scoped data (teams, scores, feed, contests, banner...) lives
+     in years/<year>/data. Everything else (Tribute Wall, Joe's page,
+     champions, course) stays in the shared "data" collection.
+   - Which year is read is set by the app-config doc. Until the 2026
+     migration has run there is no app-config, and everything reads
+     the shared collection exactly as before ("legacy mode").
+   - Test mode (the /test/ copy) uses test_data and test_years only.
+     It can READ the live collection for the migration copy, but has
+     no code path that writes to it.
+   App code passes the same keys as always ("teams", "feed-post:abc");
+   the routing below decides which collection each key belongs to.
 --------------------------------------------------------- */
 (async function initFirebaseStorage(){
   try{
@@ -13,7 +49,7 @@
     const {
       initializeFirestore, doc, getDoc, setDoc, deleteDoc,
       collection, query, where, getDocs, documentId,
-      deleteField, onSnapshot
+      deleteField, onSnapshot, writeBatch
     } = await import("https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js");
 
     const firebaseConfig = {
@@ -28,81 +64,89 @@
     const fbApp = initializeApp(firebaseConfig);
     // Works around a currently-open Firebase SDK bug (firebase-js-sdk#9789)
     // where Safari 26.4+ (iPhone and Mac) takes ~10s per read using the
-    // default streaming transport. Long-polling sidesteps whatever's
-    // broken there. The documented tradeoff is "some performance
-    // degradation" for long-lived realtime listeners -- we don't use
-    // those (plain get/set only), so it costs us essentially nothing here.
+    // default streaming transport. Long-polling sidesteps it.
     const db = initializeFirestore(fbApp, {
       experimentalForceLongPolling: true,
       useFetchStreams: false
     });
-    const COLLECTION = 'data';
+
+    const TEST = window.JOEY_TEST_MODE;
+    const LIVE_FLAT = 'data';                          // the original single collection (read-only from test mode)
+    const GLOBAL = TEST ? 'test_data' : 'data';
+    const YEARS  = TEST ? 'test_years' : 'years';
+    const CONFIG_KEY = 'app-config';
+
+    // ---- which keys belong to a tournament year ----
+    const YEAR_KEYS = new Set([
+      'teams', 'groups', 'contests', 'extra-contests',
+      'scores-locked', 'contests-locked', 'event-info', 'hero-year',
+      'team-scores', 'feed-posts'   // old single-blob formats, still read once for migration
+    ]);
+    const YEAR_PREFIXES = ['team-score:', 'feed-post:'];
+    const isYearKey = (key)=> YEAR_KEYS.has(key) || YEAR_PREFIXES.some(p=>key.startsWith(p));
+
+    // ---- year config ----
+    let config = null;      // {currentYear, years:{"2026":{status}}}
+    let activeYear = null;  // the year being viewed (defaults to currentYear)
+    try{
+      const snap = await getDoc(doc(db, GLOBAL, CONFIG_KEY));
+      if(snap.exists()) config = JSON.parse(snap.data().value);
+    }catch(e){ console.error('app-config read failed', e); }
+    if(config && config.currentYear) activeYear = Number(config.currentYear);
+    const yearMode = ()=> !!(config && activeYear);
+
+    const globalCol = ()=>collection(db, GLOBAL);
+    const yearCol = (y)=>collection(db, YEARS, String(y), 'data');
+    const colFor = (key)=> (yearMode() && isYearKey(key)) ? yearCol(activeYear) : globalCol();
+    const docFor = (key)=> doc(colFor(key), key);
+    const prefixQuery = (col, prefix)=>query(col,
+      where(documentId(), '>=', prefix),
+      where(documentId(), '<', prefix + ''));
 
     window.storage = {
       async get(key, shared){
         if(!shared){
-          const v = localStorage.getItem('personal:' + key);
+          const v = devStore.getItem('personal:' + key);
           return v === null ? null : {key, value: v, shared:false};
         }
-        const snap = await getDoc(doc(db, COLLECTION, key));
+        const snap = await getDoc(docFor(key));
         if(!snap.exists()) return null;
         return {key, value: snap.data().value, shared:true};
       },
       async set(key, value, shared){
         if(!shared){
-          localStorage.setItem('personal:' + key, value);
+          devStore.setItem('personal:' + key, value);
           return {key, value, shared:false};
         }
-        await setDoc(doc(db, COLLECTION, key), {value, updatedAt: Date.now()});
+        await setDoc(docFor(key), {value, updatedAt: Date.now()});
         return {key, value, shared:true};
       },
       async delete(key, shared){
         if(!shared){
-          localStorage.removeItem('personal:' + key);
+          devStore.removeItem('personal:' + key);
           return {key, deleted:true, shared:false};
         }
-        await deleteDoc(doc(db, COLLECTION, key));
+        await deleteDoc(docFor(key));
         return {key, deleted:true, shared:true};
       },
       async list(prefix, shared){
         if(!shared){
-          const keys = [];
-          for(let i=0;i<localStorage.length;i++){
-            const k = localStorage.key(i);
-            if(k && k.startsWith('personal:'+prefix)) keys.push(k.slice('personal:'.length));
-          }
+          const keys = devStore.keys().filter(k=>k.startsWith('personal:'+prefix)).map(k=>k.slice('personal:'.length));
           return {keys, prefix, shared:false};
         }
-        const q = query(
-          collection(db, COLLECTION),
-          where(documentId(), '>=', prefix),
-          where(documentId(), '<', prefix + '\uf8ff')
-        );
-        const snap = await getDocs(q);
-        const keys = snap.docs.map(d => d.id);
-        return {keys, prefix, shared:true};
+        const snap = await getDocs(prefixQuery(colFor(prefix), prefix));
+        return {keys: snap.docs.map(d=>d.id), prefix, shared:true};
       },
       // Same prefix match as list(), but returns each document's value in
       // the same round trip -- avoids a separate get() per key afterward.
       async listWithValues(prefix, shared){
         if(!shared){
-          const items = [];
-          for(let i=0;i<localStorage.length;i++){
-            const k = localStorage.key(i);
-            if(k && k.startsWith('personal:'+prefix)){
-              items.push({key: k.slice('personal:'.length), value: localStorage.getItem(k)});
-            }
-          }
+          const items = devStore.keys().filter(k=>k.startsWith('personal:'+prefix))
+            .map(k=>({key: k.slice('personal:'.length), value: devStore.getItem(k)}));
           return {items, prefix, shared:false};
         }
-        const q = query(
-          collection(db, COLLECTION),
-          where(documentId(), '>=', prefix),
-          where(documentId(), '<', prefix + '\uf8ff')
-        );
-        const snap = await getDocs(q);
-        const items = snap.docs.map(d => ({key: d.id, value: d.data().value}));
-        return {items, prefix, shared:true};
+        const snap = await getDocs(prefixQuery(colFor(prefix), prefix));
+        return {items: snap.docs.map(d=>({key: d.id, value: d.data().value})), prefix, shared:true};
       }
     };
 
@@ -121,18 +165,14 @@
       }
       return out;
     };
-    const scoreQuery = ()=>query(
-      collection(db, COLLECTION),
-      where(documentId(), '>=', 'team-score:'),
-      where(documentId(), '<', 'team-score:' + '\uf8ff')
-    );
+    const scoreQuery = ()=>prefixQuery(colFor('team-score:'), 'team-score:');
     window.storage.scoreSetHole = async (tid, hole, val)=>{
-      await setDoc(doc(db, COLLECTION, 'team-score:'+tid),
+      await setDoc(docFor('team-score:'+tid),
         {holes: {[String(hole)]: val ? val : deleteField()}, updatedAt: Date.now()},
         {merge:true});
     };
     window.storage.scoreReplaceAll = async (tid, holesObj)=>{
-      await setDoc(doc(db, COLLECTION, 'team-score:'+tid),
+      await setDoc(docFor('team-score:'+tid),
         {holes: holesObj || {}, updatedAt: Date.now()});
     };
     window.storage.scoreList = async ()=>{
@@ -145,7 +185,7 @@
         // One-time upgrade: convert an old whole-scorecard doc into
         // per-hole fields (drops `value`), so clearing a hole sticks.
         if(typeof d.data().value === 'string'){
-          setDoc(doc(db, COLLECTION, d.id), {holes, updatedAt: Date.now()})
+          setDoc(docFor(d.id), {holes, updatedAt: Date.now()})
             .catch(e=>console.error('score migrate failed', tid, e));
         }
       });
@@ -153,41 +193,103 @@
     };
     // Live listener: Firestore only bills for docs that CHANGE after the
     // first snapshot, instead of re-reading every team every 20 seconds.
-    window.storage.scoreWatch = (cb)=>onSnapshot(scoreQuery(), snap=>{
-      const out = {};
-      snap.docs.forEach(d=>{ out[d.id.slice('team-score:'.length)] = scoreDocToHoles(d.data()); });
-      cb(out);
-    }, err=>console.error('score listener error', err));
+    let stopScoreWatch = null;
+    window.storage.scoreWatch = (cb)=>{
+      if(stopScoreWatch) stopScoreWatch();
+      stopScoreWatch = onSnapshot(scoreQuery(), snap=>{
+        const out = {};
+        snap.docs.forEach(d=>{ out[d.id.slice('team-score:'.length)] = scoreDocToHoles(d.data()); });
+        cb(out);
+      }, err=>console.error('score listener error', err));
+      return stopScoreWatch;
+    };
 
     // --- Posts: raw docs, field-level merges, and "what changed" fetches ---
-    const prefixQuery = (prefix)=>query(
-      collection(db, COLLECTION),
-      where(documentId(), '>=', prefix),
-      where(documentId(), '<', prefix + '\uf8ff')
-    );
     window.storage.listRaw = async (prefix)=>{
-      const snap = await getDocs(prefixQuery(prefix));
+      const snap = await getDocs(prefixQuery(colFor(prefix), prefix));
       return snap.docs.map(d=>({key: d.id, data: d.data()}));
     };
     // Merge only the given fields into a doc (nested maps merge too), so
     // a like or a comment never rewrites the rest of the post.
     window.storage.mergeDoc = async (key, fields)=>{
-      await setDoc(doc(db, COLLECTION, key), {...fields, updatedAt: Date.now()}, {merge:true});
+      await setDoc(docFor(key), {...fields, updatedAt: Date.now()}, {merge:true});
     };
     window.storage.del = ()=>deleteField();
     // Every doc carries updatedAt (set on each write), so this returns only
     // what changed since the last check -- usually a handful of reads.
+    // In year mode it checks the shared collection and the viewed year.
     window.storage.changedSince = async (ts)=>{
-      const snap = await getDocs(query(collection(db, COLLECTION), where('updatedAt', '>', ts)));
-      return snap.docs.map(d=>({key: d.id, data: d.data()}));
+      const cols = yearMode() ? [globalCol(), yearCol(activeYear)] : [globalCol()];
+      const snaps = await Promise.all(cols.map(c=>getDocs(query(c, where('updatedAt', '>', ts)))));
+      return snaps.flatMap(s=>s.docs.map(d=>({key: d.id, data: d.data()})));
     };
 
     window.storage.presencePing = async (deviceId, fields)=>{
-      await setDoc(doc(db, COLLECTION, 'presence:'+deviceId), fields);
+      await setDoc(doc(globalCol(), 'presence:'+deviceId), fields);
     };
     window.storage.presenceList = async ()=>{
-      const snap = await getDocs(prefixQuery('presence:'));
+      const snap = await getDocs(prefixQuery(globalCol(), 'presence:'));
       return snap.docs.map(d=>({deviceId: d.id.slice('presence:'.length), ...d.data()}));
+    };
+
+    // ---- Year info for the app ----
+    window.storage.testMode = TEST;
+    window.storage.yearMode = yearMode;
+    window.storage.config = ()=>config;
+    window.storage.currentYear = ()=> config ? Number(config.currentYear) : null;
+    window.storage.activeYear = ()=>activeYear;
+    window.storage.setActiveYear = (y)=>{ activeYear = Number(y); };
+    window.storage.saveConfig = async (cfg)=>{
+      await setDoc(doc(globalCol(), CONFIG_KEY), {value: JSON.stringify(cfg), updatedAt: Date.now()});
+      config = cfg;
+    };
+
+    /* ---- One-time migration: copy a year out of the original flat
+       "data" collection into the year layout. Copies, never moves:
+       the source is only read. Live mode: year-scoped docs go to
+       years/<y>/data; shared docs are already in place. Test mode:
+       year-scoped docs go to test_years/<y>/data and shared docs are
+       copied into test_data, so the test copy has real content. ---- */
+    window.storage.migrateFlatYear = async (year, onProgress)=>{
+      year = Number(year);
+      const existing = await getDocs(query(yearCol(year)));
+      if(!existing.empty) throw new Error(`Year ${year} already has ${existing.size} documents -- not copying over them.`);
+      const src = await getDocs(collection(db, LIVE_FLAT));
+      const counts = {year:0, shared:0, skipped:0};
+      const writes = [];
+      src.docs.forEach(d=>{
+        const key = d.id, data = d.data();
+        if(key === CONFIG_KEY || key === 'presence-since' || key.startsWith('presence:')){ counts.skipped++; return; }
+        if(key.startsWith('feed-post:') && data.deleted){ counts.skipped++; return; }  // cleared pilot posts
+        if(isYearKey(key)){ writes.push([doc(yearCol(year), key), data]); counts.year++; }
+        else if(TEST){ writes.push([doc(globalCol(), key), data]); counts.shared++; }
+      });
+      for(let i=0;i<writes.length;i+=400){
+        const batch = writeBatch(db);
+        writes.slice(i, i+400).forEach(([ref, data])=>batch.set(ref, data));
+        await batch.commit();
+        if(onProgress) onProgress(Math.min(i+400, writes.length), writes.length);
+      }
+      const cfg = {currentYear: year, years: {...((config && config.years) || {}), [year]: {status:'final'}}};
+      await window.storage.saveConfig(cfg);
+      activeYear = year;
+      return counts;
+    };
+
+    // Test mode only: wipe all test data so the migration can be re-run.
+    window.storage.resetTestData = async ()=>{
+      if(!TEST) throw new Error('Only allowed in the test copy');
+      const refs = [];
+      (await getDocs(globalCol())).docs.forEach(d=>refs.push(d.ref));
+      const yrs = Object.keys((config && config.years) || {});
+      for(const y of yrs) (await getDocs(yearCol(y))).docs.forEach(d=>refs.push(d.ref));
+      for(let i=0;i<refs.length;i+=400){
+        const batch = writeBatch(db);
+        refs.slice(i, i+400).forEach(r=>batch.delete(r));
+        await batch.commit();
+      }
+      config = null; activeYear = null;
+      return refs.length;
     };
 
     window.__storageReady = true;

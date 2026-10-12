@@ -1082,3 +1082,8 @@
     font-size:11px;color:var(--ink-soft);text-align:center;margin-top:8px;min-height:14px;
   }
   .save-indicator.err{color:var(--flag);font-weight:600;}
+
+/* Test copy marker (only shown at /test/) */
+.test-mode-pill{position:fixed;top:calc(env(safe-area-inset-top, 0px) + 6px);right:8px;z-index:400;pointer-events:none;
+  background:#E8761B;color:#fff;font:600 10.5px/1 Inter,system-ui,sans-serif;letter-spacing:.04em;text-transform:uppercase;
+  padding:5px 8px;border-radius:999px;box-shadow:0 1px 4px rgba(0,0,0,.25);}

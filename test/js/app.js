@@ -51,7 +51,7 @@ let memorialBio = "";
 let memorialPhoto = null;
 let champions = [];         // [{year,name}]
 let scoresLocked = false;   // true once champions are declared; admin can unlock
-const TOURNAMENT_YEAR = 2026;   // <- change this one line each year
+let TOURNAMENT_YEAR = 2026;     // set from the app-config doc at startup (falls back to 2026 before the year migration)
 let heroYearText = `TOURNAMENT · ${TOURNAMENT_YEAR}`;
 // Event details shown under the Tournament pill on the Joe tab (admin-editable)
 let memorialTitle = 'Remembering Joe';   // heading above the memorial story (admin-editable)
@@ -356,9 +356,9 @@ async function saveTeamScore(tid){
 const PENDING_KEY = 'joey-pending-scores';
 let pendingScores = {};      // {"tid|hole": val or 0}
 let failedScores = {};       // same keys, for ones that errored
-try{ pendingScores = JSON.parse(localStorage.getItem(PENDING_KEY) || '{}') || {}; }catch(e){ pendingScores = {}; }
+try{ pendingScores = JSON.parse(devStore.getItem(PENDING_KEY) || '{}') || {}; }catch(e){ pendingScores = {}; }
 function persistPending(){
-  try{ localStorage.setItem(PENDING_KEY, JSON.stringify(pendingScores)); }catch(e){}
+  try{ devStore.setItem(PENDING_KEY, JSON.stringify(pendingScores)); }catch(e){}
   updateSyncBadge();
 }
 function applyPendingScores(target){
@@ -449,8 +449,8 @@ async function loadAllPosts(prefix, legacyKey){
 --------------------------------------------------------- */
 const DEVICE_ID = (()=>{
   try{
-    let id = localStorage.getItem('joey-device-id');
-    if(!id){ id = uid(); localStorage.setItem('joey-device-id', id); }
+    let id = devStore.getItem('joey-device-id');
+    if(!id){ id = uid(); devStore.setItem('joey-device-id', id); }
     return id;
   }catch(e){ return uid(); }
 })();
@@ -553,7 +553,7 @@ function pingPresence(){
   if(!myRole && !myName && !isAdminSession) return;   // not signed in yet
   const sig = presenceSignature();
   let last = {};
-  try{ last = JSON.parse(localStorage.getItem(PRESENCE_LOCAL_KEY) || '{}') || {}; }catch(e){}
+  try{ last = JSON.parse(devStore.getItem(PRESENCE_LOCAL_KEY) || '{}') || {}; }catch(e){}
   if(last.sig === sig && Date.now() - (last.t||0) < 10*60*1000) return;
   const ua = navigator.userAgent || '';
   const device = (/iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)) ? 'iPhone'
@@ -564,7 +564,7 @@ function pingPresence(){
     name: myName || '', role: myRole || '', teamId: myTeamId || '',
     admin: !!isAdminSession, device, standalone, lastSeen: now
   }).then(()=>{
-    try{ localStorage.setItem(PRESENCE_LOCAL_KEY, JSON.stringify({sig, t: now})); }catch(e){}
+    try{ devStore.setItem(PRESENCE_LOCAL_KEY, JSON.stringify({sig, t: now})); }catch(e){}
   }).catch(e=>console.error('presence ping failed', e));
 }
 document.addEventListener('visibilitychange', ()=>{
@@ -2720,10 +2720,10 @@ const CAMERA_FLAG_KEY = 'joey-camera-open';
 let cameraOpenedAt = 0;
 function markCameraOpen(){
   cameraOpenedAt = Date.now();
-  try{ localStorage.setItem(CAMERA_FLAG_KEY, String(cameraOpenedAt)); }catch(e){}
+  try{ devStore.setItem(CAMERA_FLAG_KEY, String(cameraOpenedAt)); }catch(e){}
 }
 function clearCameraFlag(){
-  try{ localStorage.removeItem(CAMERA_FLAG_KEY); }catch(e){}
+  try{ devStore.removeItem(CAMERA_FLAG_KEY); }catch(e){}
 }
 function cameraRecentlyOpened(){ return Date.now() - cameraOpenedAt < 2*60*1000; }
 document.addEventListener('visibilitychange', ()=>{
@@ -2775,7 +2775,7 @@ async function restoreMediaDrafts(){
     restored.push((d.isVideo ? 'video' : 'photo') + (kind==='feed' ? ' on the Feed' : ' on the Tribute Wall'));
   }
   let cameraTs = 0;
-  try{ cameraTs = parseInt(localStorage.getItem(CAMERA_FLAG_KEY) || '0', 10); }catch(e){}
+  try{ cameraTs = parseInt(devStore.getItem(CAMERA_FLAG_KEY) || '0', 10); }catch(e){}
   clearCameraFlag();
   if(restored.length){
     render();
@@ -4267,6 +4267,80 @@ document.addEventListener('click', async (e)=>{
 if(window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone){
   document.body.classList.add('is-standalone');
 }
+/* ---------------------------------------------------------
+   TOURNAMENT YEARS
+   The year comes from the app-config doc (see storage.js). Before
+   the 2026 migration runs there is no config, the app reads the
+   original shared collection, and the year stays 2026 -- so this
+   code behaves exactly like the old app until an admin migrates.
+--------------------------------------------------------- */
+function applyTournamentYear(){
+  const y = window.storage.activeYear && window.storage.activeYear();
+  if(y){
+    TOURNAMENT_YEAR = y;
+    heroYearText = `TOURNAMENT · ${y}`;   // a saved per-year hero-year still overrides this in loadAll()
+  }
+  const pill = document.getElementById('testModePill');
+  if(pill) pill.style.display = window.storage.testMode ? '' : 'none';
+}
+function paintYearsAdmin(){
+  const st = window.storage;
+  const status = document.getElementById('yearsStatus');
+  if(!status) return;
+  const cfg = st.config();
+  const where = st.testMode ? 'Test copy: reading and writing test data only.' : 'Live data.';
+  if(st.yearMode()){
+    const yrs = Object.entries(cfg.years || {}).sort(([a],[b])=>b-a)
+      .map(([y, v])=>`${y}${v && v.status==='final' ? ' (Final)' : ''}`).join(', ');
+    status.textContent = `${where} Current year: ${cfg.currentYear}. Years: ${yrs}.`;
+  } else {
+    status.textContent = `${where} Not set up yet. Everything still reads the original single collection.`;
+  }
+  document.getElementById('migrateYearBtn').style.display = st.yearMode() ? 'none' : '';
+  document.getElementById('resetTestBtn').style.display = st.testMode ? '' : 'none';
+  // Start Fresh wipes the current year's scores and feed; once years
+  // exist, a new year replaces it, so it is hidden to protect the archive.
+  document.getElementById('startFreshSection').style.display = st.yearMode() ? 'none' : '';
+}
+function wireYearsAdmin(){
+  paintYearsAdmin();
+  const migrateBtn = document.getElementById('migrateYearBtn');
+  migrateBtn.onclick = async ()=>{
+    if(!isAdminSession) return;
+    const msg = window.storage.testMode
+      ? 'Copy the live 2026 data into the TEST year layout?\n\nThe live data is only read, never changed.'
+      : 'Copy 2026 into its own year?\n\nThe original data is copied, not moved, and stays where it is. Download a backup first if you haven\'t.';
+    if(!confirm(msg)) return;
+    migrateBtn.disabled = true;
+    migrateBtn.textContent = 'Copying…';
+    try{
+      const c = await window.storage.migrateFlatYear(2026, (done, total)=>{ migrateBtn.textContent = `Copying… ${done}/${total}`; });
+      alert(`Done. Copied ${c.year} year documents` + (c.shared ? ` and ${c.shared} shared documents` : '') + `; skipped ${c.skipped}.\n\nThe app will reload.`);
+      location.reload();
+    }catch(e){
+      console.error('migration failed', e);
+      alert('The copy did not finish: ' + (e && e.message ? e.message : e) + '\n\nNothing in the original data was changed.');
+      migrateBtn.disabled = false;
+      migrateBtn.textContent = '📦 Copy 2026 into its own year';
+    }
+  };
+  const resetBtn = document.getElementById('resetTestBtn');
+  resetBtn.onclick = async ()=>{
+    if(!isAdminSession || !window.storage.testMode) return;
+    if(!confirm('Delete ALL test data so the copy can be run again?\n\nOnly affects the test copy. Live data is untouched.')) return;
+    resetBtn.disabled = true;
+    try{
+      const n = await window.storage.resetTestData();
+      ['my-name','my-role','my-team-id'].forEach(k=>devStore.removeItem('personal:'+k));
+      alert(`Deleted ${n} test documents. The app will reload.`);
+      location.reload();
+    }catch(e){
+      alert('Reset failed: ' + (e && e.message ? e.message : e));
+      resetBtn.disabled = false;
+    }
+  };
+}
+
 (async function init(){
   if(!window.__storageReady){
     await new Promise(resolve=>{
@@ -4278,6 +4352,7 @@ if(window.matchMedia('(display-mode: standalone)').matches || window.navigator.s
     document.body.innerHTML = '<div style="padding:40px 24px;text-align:center;font-family:sans-serif;color:#333;">Couldn\'t connect to the database. Check your internet connection and reload the page.</div>';
     return;
   }
+  applyTournamentYear();
   await loadAll();
   wireIdentityGate();
   checkNameGate();
@@ -4306,6 +4381,7 @@ if(window.matchMedia('(display-mode: standalone)').matches || window.navigator.s
   };
   document.getElementById('syncNowBtn').onclick = ()=>refreshLiveData(false);
   document.getElementById('startFreshBtn').onclick = startFresh;
+  wireYearsAdmin();
   document.getElementById('presenceBtn').onclick = openPresenceSheet;
   pingPresence();
   document.addEventListener('click', async (e)=>{
