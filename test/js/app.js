@@ -1592,9 +1592,9 @@ function renderContestSummary(){
 function lockBannerHtml(){
   if(viewingPastYear()) return '';   // the Viewing Previous Year banner says it
   if(!scoresLocked) return '';
-  return `<div class="card lock-banner">
-    <div>🏁 <b>Final results</b> — scores are locked.</div>
-    ${isAdminSession ? `<button class="tiny-btn" id="unlockScoresBtn">Unlock scores</button>` : ''}
+  return `<div class="year-status-bar">
+    <span class="past-year-text"><span class="past-year-main">${TOURNAMENT_YEAR} Final Results</span><span class="past-year-sub">Scores are locked</span></span>
+    ${isAdminSession ? `<button class="past-year-back" id="unlockScoresBtn" type="button">Unlock scores</button>` : ''}
   </div>`;
 }
 function renderScorecard(){
@@ -4311,6 +4311,9 @@ function paintYearChrome(){
     const past = viewingPastYear();
     banner.style.display = past ? '' : 'none';
     if(past){
+      const upcoming = TOURNAMENT_YEAR > window.storage.currentYear();
+      document.getElementById('pastYearKind').textContent = upcoming ? 'Upcoming' : 'Previous';
+      document.getElementById('pastYearSub').textContent = upcoming ? 'Upcoming tournament (read-only)' : 'Final results (read-only)';
       document.getElementById('pastYearLabel').textContent = TOURNAMENT_YEAR;
       document.getElementById('backToCurrentBtn').textContent = `Back to ${window.storage.currentYear()}`;
     }

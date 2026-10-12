@@ -1121,3 +1121,12 @@
 .past-feed-count{color:var(--gold);font-weight:700;}
 .past-feed-caret{color:var(--gold);font-size:14px;}
 .past-feed.open .past-feed-head{border-bottom:0;}
+
+/* banner type: big all-caps headline, sentence-case subline */
+.past-year-main{font-size:14.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;}
+.past-year-banner .past-year-sub, .year-status-bar .past-year-sub{font-size:13px;font-weight:500;letter-spacing:0;text-transform:none;color:rgba(255,255,255,.78);}
+.year-status-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 14px;padding:12px 14px;
+  border-radius:var(--radius);background:linear-gradient(90deg,#1B2A4A 0%,#2E4470 100%);color:#fff;box-shadow:0 2px 8px rgba(27,42,74,.18);}
+.past-year-main{font-size:13.5px;letter-spacing:.035em;white-space:nowrap;}
+.past-year-text{min-width:0;}
+.past-year-back{white-space:nowrap;}
