@@ -1261,6 +1261,7 @@ function holeSvg(h){
    RENDER: ROUTER
 --------------------------------------------------------- */
 function render(){
+  try{ if(window.storage && window.storage.yearMode) paintYearChrome(); }catch(e){}
   // Rebuilding the DOM on every render would otherwise reset the Front/Back
   // Nine tables' horizontal scroll (including the auto-scroll-to-current-hole
   // on tab entry) back to the start. Preserve it across every render, not
@@ -1591,11 +1592,7 @@ function renderContestSummary(){
 --------------------------------------------------------- */
 function lockBannerHtml(){
   if(viewingPastYear()) return '';   // the Viewing Previous Year banner says it
-  if(!scoresLocked) return '';
-  return `<div class="year-status-bar">
-    <span class="past-year-text"><span class="past-year-main">${TOURNAMENT_YEAR} Final Results</span><span class="past-year-sub">Scores are locked</span></span>
-    ${isAdminSession ? `<button class="past-year-back" id="unlockScoresBtn" type="button">Unlock scores</button>` : ''}
-  </div>`;
+  return '';   // the navy banner above the page shows locked / previous-year status
 }
 function renderScorecard(){
   if(!isAdminSession){
@@ -4318,14 +4315,26 @@ function paintYearChrome(){
   if(scYear) scYear.innerHTML = hasMultipleYears() ? yearSwitchChip() : '🚩 ' + TOURNAMENT_YEAR;
   const banner = document.getElementById('pastYearBanner');
   if(banner){
+    // One navy banner, three states: previous year, upcoming year, or the
+    // current year with final scores locked (scorecard + leaderboard only).
     const past = viewingPastYear();
-    banner.style.display = past ? '' : 'none';
+    const locked = !past && scoresLocked && ['scorecard','leaderboard'].includes(currentTab);
+    banner.style.display = (past || locked) ? '' : 'none';
+    const main = document.getElementById('pastYearMain');
+    const sub = document.getElementById('pastYearSub');
+    const back = document.getElementById('backToCurrentBtn');
+    const unlock = document.getElementById('unlockScoresBtn');
     if(past){
       const upcoming = TOURNAMENT_YEAR > window.storage.currentYear();
-      document.getElementById('pastYearKind').textContent = upcoming ? 'Upcoming' : 'Previous';
-      document.getElementById('pastYearSub').textContent = upcoming ? 'Upcoming tournament (read-only)' : 'Final results (read-only)';
-      document.getElementById('pastYearLabel').textContent = TOURNAMENT_YEAR;
-      document.getElementById('backToCurrentBtn').textContent = `Back to ${window.storage.currentYear()}`;
+      main.innerHTML = `Viewing ${upcoming ? 'Upcoming' : 'Previous'} Year: <b>${TOURNAMENT_YEAR}</b>`;
+      sub.textContent = upcoming ? 'Upcoming Tournament (read-only)' : 'Final Results (read-only)';
+      back.textContent = `Back to ${window.storage.currentYear()}`;
+      back.style.display = ''; unlock.style.display = 'none';
+    } else if(locked){
+      main.textContent = `${TOURNAMENT_YEAR} Final Results`;
+      sub.textContent = 'Scores Are Locked';
+      back.style.display = 'none';
+      unlock.style.display = isAdminSession ? '' : 'none';
     }
   }
   document.body.classList.toggle('viewing-past-year', viewingPastYear());
