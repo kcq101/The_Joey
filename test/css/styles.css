@@ -1109,4 +1109,15 @@
 .past-feed.open .past-feed-head{border-bottom:1px solid var(--line);}
 .past-feed > .empty, .past-feed > .post{margin:0 14px;}
 .past-feed > .post:last-child{margin-bottom:10px;}
-.board-title .year-switch-chip{color:var(--fairway);background:rgba(0,103,71,.08);border-color:rgba(0,103,71,.4);font-size:13px;}
+
+/* ---- year refinements ---- */
+.past-year-text{display:flex;flex-direction:column;gap:3px;line-height:1.2;}
+.past-year-sub{font-size:11.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:rgba(255,255,255,.75);}
+.board-year-row{display:flex;justify-content:center;margin:6px 0 14px;}
+.board-year-row .year-switch-chip{margin:0;color:var(--fairway);background:rgba(0,103,71,.08);border-color:rgba(0,103,71,.45);
+  font-size:14px;padding:7px 14px;}
+.past-feed{border:0;box-shadow:0 2px 8px rgba(27,42,74,.18);}
+.past-feed-head{background:linear-gradient(90deg,#1B2A4A 0%,#2E4470 100%);color:#fff;padding:16px 18px;font-size:15px;}
+.past-feed-count{color:var(--gold);font-weight:700;}
+.past-feed-caret{color:var(--gold);font-size:14px;}
+.past-feed.open .past-feed-head{border-bottom:0;}

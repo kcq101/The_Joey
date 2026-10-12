@@ -1407,7 +1407,7 @@ function renderLeaderboard(){
         <div class="sign-beam"><div class="sign-beam-gold-strip"></div></div>
         <div class="sign-pole"></div>
         <div class="sign-ground-shadow"></div>
-        <div class="board-title">The Joey${hasMultipleYears() ? yearSwitchChip() : `<span class="board-title-year">${TOURNAMENT_YEAR}</span>`}</div>
+        <div class="board-title">The Joey${hasMultipleYears() ? '' : `<span class="board-title-year">${TOURNAMENT_YEAR}</span>`}</div>${hasMultipleYears() ? `<div class="board-year-row">${yearSwitchChip()}</div>` : ''}
         ${teamsLoadFailed ? teamsLoadErrorHtml() : `<div class="empty" style="padding:14px 4px 20px;">No teams yet — set up team pairings from the Scorecard tab to get things rolling.</div>`}
       </div>
     </div>`;
@@ -1419,7 +1419,7 @@ function renderLeaderboard(){
         <div class="sign-beam"><div class="sign-beam-gold-strip"></div></div>
         <div class="sign-pole"></div>
         <div class="sign-ground-shadow"></div>
-        <div class="board-title">The Joey${hasMultipleYears() ? yearSwitchChip() : `<span class="board-title-year">${TOURNAMENT_YEAR}</span>`}</div>
+        <div class="board-title">The Joey${hasMultipleYears() ? '' : `<span class="board-title-year">${TOURNAMENT_YEAR}</span>`}</div>${hasMultipleYears() ? `<div class="board-year-row">${yearSwitchChip()}</div>` : ''}
         <div class="board-head">
           <span class="bh-pos"></span>
           <span class="bh-team">Team</span>
@@ -1590,7 +1590,7 @@ function renderContestSummary(){
    SCORECARD
 --------------------------------------------------------- */
 function lockBannerHtml(){
-  if(viewingPastYear()) return `<div class="card lock-banner"><div>🏁 <b>${TOURNAMENT_YEAR} final results</b> — view only.</div></div>`;
+  if(viewingPastYear()) return '';   // the Viewing Previous Year banner says it
   if(!scoresLocked) return '';
   return `<div class="card lock-banner">
     <div>🏁 <b>Final results</b> — scores are locked.</div>
@@ -4410,7 +4410,7 @@ function renderPastFeeds(){
       : `<div class="empty">No posts from ${y}.</div>`;
     return `<div class="card past-feed ${pf.open ? 'open' : ''}">
       <button class="past-feed-head" data-past-feed="${y}" type="button">
-        <span>${y} Tournament Feed${count}</span><span class="past-feed-caret">${pf.open ? '▾' : '▸'}</span>
+        <span>${y} Tournament Feed<span class="past-feed-count">${count}</span></span><span class="past-feed-caret">${pf.open ? '▾' : '▸'}</span>
       </button>
       ${body}
     </div>`;
