@@ -2952,7 +2952,7 @@ function showMediaSourceMenu(anchorBtn, photoInput, videoInput, uploadInput){
   menu.style.position = 'fixed';   // coords below are viewport-based
   menu.innerHTML = `
     <button class="media-source-option" id="mediaSourceTakePhoto">📸 Take Photo</button>
-    <button class="media-source-option" id="mediaSourceRecordVideo">🎥 Record Video</button>
+    <button class="media-source-option" id="mediaSourceRecordVideo">🎥 Record Video <span class="media-limit-note">(30 sec max)</span></button>
     <button class="media-source-option" id="mediaSourceUpload">🖼 Upload</button>`;
   document.body.appendChild(menu);
 
@@ -3171,10 +3171,39 @@ document.addEventListener('visibilitychange', ()=>{
 
 // Attach a photo/video to the Feed or Tribute composer (also used to
 // restore a saved draft). Builds the small preview and saves the draft.
+// Videos are capped at 30 seconds (small grace for phones that round up).
+// Applies to recorded and uploaded videos alike -- the browser can't stop
+// the phone's camera at 30s, so the check happens once the clip comes back.
+const MAX_VIDEO_SECONDS = 30;
+function readVideoDuration(f){
+  return new Promise(resolve=>{
+    const v = document.createElement('video');
+    const url = URL.createObjectURL(f);
+    let done = false;
+    const finish = (d)=>{ if(done) return; done = true; URL.revokeObjectURL(url); resolve(d); };
+    v.preload = 'metadata'; v.muted = true;
+    v.onloadedmetadata = ()=>{
+      if(v.duration === Infinity){   // some recorders: seek far to get the real length
+        v.ontimeupdate = ()=>{ v.ontimeupdate = null; finish(v.duration); };
+        try{ v.currentTime = 1e7; }catch(e){ finish(NaN); }
+      } else finish(v.duration);
+    };
+    v.onerror = ()=>finish(NaN);
+    setTimeout(()=>finish(NaN), 8000);   // can't tell -> don't block the post
+    v.src = url;
+  });
+}
 async function attachPendingMedia(f, kind, restored){
   if(!f) return;
   clearCameraFlag();
   const isVideo = (f.type || '').startsWith('video/');
+  if(isVideo && !restored){
+    const secs = await readVideoDuration(f);
+    if(isFinite(secs) && secs > MAX_VIDEO_SECONDS + 0.9){
+      alert(`That video is ${Math.round(secs)} seconds long. Videos can be up to ${MAX_VIDEO_SECONDS} seconds.\n\nTrim it in your Photos app (Edit), then upload it, or record a shorter clip.`);
+      return;
+    }
+  }
   const previewWrapId = kind==='feed' ? 'feedImgPreviewWrap' : 'tributeImgPreviewWrap';
   if(kind==='feed'){ pendingFeedFile = f; pendingFeedIsVideo = isVideo; }
   else { pendingTributeFile = f; pendingTributeIsVideo = isVideo; }
