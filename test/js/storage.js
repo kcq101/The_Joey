@@ -357,7 +357,10 @@ window.devStore = (function(){
         await batch.commit();
         if(onProgress) onProgress(Math.min(i+400, writes.length), writes.length);
       }
-      const cfg = {currentYear: year, years: {...((config && config.years) || {}), [year]: {status:'final'}}};
+      // Scores are locked (the round is over), but the year itself stays open
+      // so photos, replies and contest fixes can still come in. Mark Final later.
+      await setDoc(doc(yearCol(year), 'scores-locked'), {value: 'true', updatedAt: Date.now()});
+      const cfg = {currentYear: year, years: {...((config && config.years) || {}), [year]: {status:'open'}}};
       await window.storage.saveConfig(cfg);
       activeYear = year;
       return counts;
