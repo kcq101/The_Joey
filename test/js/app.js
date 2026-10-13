@@ -855,17 +855,50 @@ function checkNameGate(){
   gateShowStep('gateStep1');
 }
 
+/* ---------------------------------------------------------
+   CELEBRATION POP-UP ("broadcast stamp") -- centered, big tilted
+   Bebas letters with a gold outline over a soft vignette. Used for
+   Welcome back and score moments. Never blocks taps.
+--------------------------------------------------------- */
+function showCelebration(opts){
+  const o = opts || {};
+  let el = document.getElementById('celebrateOverlay');
+  if(!el){
+    el = document.createElement('div');
+    el.id = 'celebrateOverlay';
+    el.setAttribute('aria-live', 'polite');
+    document.body.appendChild(el);
+  }
+  el.className = 'celebrate-overlay' + (o.kind ? ' is-' + o.kind : '');
+  el.innerHTML = `<div class="celebrate-card">
+      ${o.emoji ? `<div class="celebrate-emoji">${o.emoji}</div>` : ''}
+      ${o.kicker ? `<div class="celebrate-kicker">${escapeHtml(o.kicker)}</div>` : ''}
+      <div class="celebrate-title">${escapeHtml(o.title || '')}</div>
+      ${o.sub ? `<div class="celebrate-sub">${escapeHtml(o.sub)}</div>` : ''}
+    </div>`;
+  void el.offsetWidth;            // restart the animation
+  el.classList.add('show');
+  clearTimeout(showCelebration._t);
+  showCelebration._t = setTimeout(()=>el.classList.remove('show'), o.ms || 1900);
+}
+function scoreCelebration(val, h){
+  const sub = h ? `Hole ${h.number}` : '';
+  const label = quickScoreLabel(val, h.par);
+  const map = {
+    'Hole in One': ['⛳', 'Ace!'],
+    'Albatross':   ['🦅', 'Albatross!'],
+    'Eagle':       ['🦅', 'Eagle!'],
+    'Birdie':      ['🐦', 'Birdie!'],
+    'Par':         ['⛳', 'Nice Par!'],
+    'Snowman':     ['⛄', 'Snowman!']
+  };
+  const m = map[label]; if(!m) return;
+  showCelebration({emoji: m[0], title: m[1], sub, kind: label==='Snowman' ? 'snow' : 'score'});
+}
+
 function showWelcomeBackToast(){
-  const toast = document.getElementById('welcomeBackToast');
-  if(!toast) return;
-  toast.textContent = `Welcome back, ${myName}`;
-  toast.style.display = 'block';
-  toast.style.opacity = '1';
-  setTimeout(()=>{
-    toast.style.transition = 'opacity 400ms ease';
-    toast.style.opacity = '0';
-    setTimeout(()=>{ toast.style.display='none'; toast.style.transition=''; }, 420);
-  }, 3000);
+  if(!myName) return;
+  showCelebration({kicker: 'Welcome back', title: myName, kind: 'welcome', ms: 2600});
 }
 
 function gateShowStep(id){
@@ -3063,7 +3096,6 @@ function fireConfetti(){
     document.body.appendChild(el);
     setTimeout(()=>el.remove(), 1900);
   }
-  showToast('🦅 Eagle! Great shot.');
 }
 
 function fireBirdieCelebration(){
@@ -3079,7 +3111,6 @@ function fireBirdieCelebration(){
     document.body.appendChild(el);
     setTimeout(()=>el.remove(), 1500);
   }
-  showToast('🐦 Birdie!');
 }
 
 function fireSnowmanAnimation(){
@@ -3097,7 +3128,6 @@ function fireSnowmanAnimation(){
     document.body.appendChild(el);
     setTimeout(()=>el.remove(), 3800);
   }
-  showToast('⛄ Snowman!');
 }
 
 function escapeHtml(str){
@@ -3359,8 +3389,8 @@ function attachHandlers(){
         const cls = scoreClass(val, h.par);
         if(cls==='eagle') fireConfetti();
         else if(cls==='birdie') fireBirdieCelebration();
-        else if(val===h.par) showToast('Nice Par!');
         if(val===8) fireSnowmanAnimation();
+        scoreCelebration(val, h);
         await maybePostScoreEvent(tid, holeNum, val, standingsBefore);
       }
       // preserve horizontal scroll position of the Front/Back Nine tables --
@@ -3422,8 +3452,8 @@ function attachHandlers(){
         const cls = scoreClass(val, h.par);
         if(cls==='eagle') fireConfetti();
         else if(cls==='birdie') fireBirdieCelebration();
-        else if(val===h.par) showToast('Nice Par!');
         if(val===8) fireSnowmanAnimation();
+        scoreCelebration(val, h);
       }
 
       // The auto feed post waits out the 2.4s undo grace period so an accidental
