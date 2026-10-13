@@ -1262,3 +1262,40 @@
 .scorecard-header{padding:9px 16px 8px;}
 .scorecard-header-year{margin-top:8px;}
 .scorecard-header-year .year-switch-chip{padding:0 6px;}
+
+/* ---- Players, roster & team builder ---- */
+.chip-wrap{display:flex;flex-wrap:wrap;gap:6px;align-items:center;}
+.player-chip{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:999px;padding:6px 11px;
+  font:600 13px Inter,system-ui,sans-serif;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.08);}
+.player-chip:active{transform:translateY(1px);}
+.player-chip.unassigned{background:#FFF6DC;border-color:#E3C774;}
+.player-chip.withdrawn{background:#EEE;color:#888;text-decoration:line-through;border-style:dashed;}
+.roster-subhead{display:flex;align-items:center;gap:6px;margin:12px 0 7px;font:700 11px Inter,system-ui,sans-serif;
+  text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft);}
+.roster-subhead span{background:var(--parchment);border-radius:999px;padding:1px 7px;color:var(--ink);}
+.team-row-players.chip-wrap{gap:5px;}
+.team-row-note{font-size:11px;color:var(--flag);font-weight:600;margin-top:3px;}
+.team-empty-note{font-size:12.5px;color:var(--ink-soft);font-style:italic;}
+.app-sheet{max-height:82vh;display:flex;flex-direction:column;}
+.app-sheet-body{overflow-y:auto;-webkit-overflow-scrolling:touch;}
+.sheet-section-label{font:700 11px Inter,system-ui,sans-serif;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft);margin:6px 0 8px;}
+.year-sheet-row > span:first-child{display:flex;flex-direction:column;align-items:flex-start;text-align:left;gap:2px;}
+.sheet-row-sub{font-size:12.5px;font-weight:500;color:var(--ink-soft);}
+.sheet-actions{display:flex;flex-wrap:wrap;gap:14px;margin-top:10px;padding-top:10px;border-top:1px solid var(--line);}
+.danger-link{color:var(--flag) !important;}
+.sheet-checklist{display:flex;flex-direction:column;gap:2px;margin-bottom:6px;}
+.sheet-check{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:10px;background:#fff;border:1px solid var(--line);
+  font:600 14.5px Inter,system-ui,sans-serif;color:var(--ink);cursor:pointer;}
+.sheet-check input{width:18px;height:18px;accent-color:var(--fairway);}
+.sheet-new-row input{width:100%;}
+
+/* sign-in: pick your name */
+.gate-find-note{font-size:12.5px;color:var(--ink-soft);margin:0 0 10px;}
+.gate-team-group{display:flex;align-items:flex-start;gap:10px;padding:6px 0;border-bottom:1px solid var(--line);}
+.gate-team-group:last-child{border-bottom:0;}
+.gate-team-group .gate-team-badge{margin-top:4px;}
+.gate-name-list{flex:1;display:flex;flex-direction:column;gap:6px;}
+.gate-name-btn{width:100%;text-align:left;background:#fff;border:1.5px solid var(--fairway);border-radius:10px;
+  padding:9px 12px;font:600 14.5px Inter,system-ui,sans-serif;color:var(--ink);cursor:pointer;}
+.gate-name-btn:active{background:#EAF2EC;}
+.gate-empty{font-size:12.5px;color:var(--ink-soft);font-style:italic;padding:8px 0;}

@@ -167,6 +167,7 @@ async function loadTeamsAndGroups(tries=2){
       teams = tm ? JSON.parse(tm.value) : [];
       groups = g ? JSON.parse(g.value) : [];
       teamsLoadFailed = false;
+      if(typeof resolveMyIdentity === 'function' && typeof players !== 'undefined') resolveMyIdentity(false);
       return true;
     }catch(e){
       console.error('teams load failed (attempt '+(i+1)+')', e);
@@ -210,6 +211,7 @@ document.addEventListener('click', async (e)=>{
    and again whenever the year switcher changes years. */
 async function loadYearData(includeLegacy){
   await loadTeamsAndGroups(2);
+  await loadRoster();
 
   scores = await loadAllScores(includeLegacy);
 
@@ -252,6 +254,7 @@ async function loadYearData(includeLegacy){
 }
 
 async function loadAll(){
+  await loadPlayers();
   await loadYearData(true);
   holesConfig = await loadAllHoles();
 
@@ -310,6 +313,11 @@ async function loadAll(){
     const t = await window.storage.get('my-team-id', false);
     myTeamId = t ? t.value : null;
   }catch(e){ myTeamId = null; }
+  try{
+    const pid = await window.storage.get('my-player-id', false);
+    myPlayerId = pid ? pid.value : null;
+  }catch(e){ myPlayerId = null; }
+  await resolveMyIdentity(true);
   // admin never persists -- always starts locked on a fresh load
   isAdminSession = false;
 }
@@ -849,13 +857,13 @@ function wireIdentityGate(){
   paintGateTeams = ()=>{
     const list = document.getElementById('gateTeamList');
     if(!list) return;
-    list.innerHTML = teams.map(t=>`
-      <button class="gate-team-btn" data-gate-team="${t.id}" type="button">
-        <span class="gate-team-badge">${escapeHtml(t.label)}</span>
-        <span class="gate-team-names">${(t.players||[]).length ? (t.players||[]).map(n=>`<span>${escapeHtml(n)}</span>`).join('') : '<span>No players listed</span>'}</span>
-      </button>`).join('') || (teamsLoadFailed
+    list.innerHTML = gatePlayerList().map(({team, people})=>`
+      <div class="gate-team-group">
+        <span class="gate-team-badge">${escapeHtml(team.label)}</span>
+        <div class="gate-name-list">${people.length ? people.map((p,i)=>`<button class="gate-name-btn" data-gate-player="${team.id}|${(team.players||[]).indexOf(p.name)}" type="button">${escapeHtml(p.name)}</button>`).join('') : '<span class="gate-empty">No players yet</span>'}</div>
+      </div>`).join('') || (teamsLoadFailed
         ? `<p style="font-size:13px;color:var(--ink-soft);">Couldn't load the teams. Check your connection.</p><button class="btn secondary small" id="gateTeamRetry" type="button">Tap to retry</button>`
-        : `<p style="font-size:13px;color:var(--ink-soft);">No teams have been set up yet.</p>`);
+        : `<p style="font-size:13px;color:var(--ink-soft);">No teams have been set up yet. Continue as a guest for now.</p>`);
     const retry = document.getElementById('gateTeamRetry');
     if(retry) retry.onclick = async ()=>{
       list.innerHTML = `<p style="font-size:13px;color:var(--ink-soft);">Loading teams…</p>`;
@@ -880,13 +888,10 @@ function wireIdentityGate(){
     window.addEventListener('resize', updHint);
     list.onscroll = updHint;
     requestAnimationFrame(()=>requestAnimationFrame(updHint));
-    list.querySelectorAll('[data-gate-team]').forEach(btn=>{
+    list.querySelectorAll('[data-gate-player]').forEach(btn=>{
       btn.onclick = ()=>{
-        myTeamId = btn.dataset.gateTeam;
-        gatePendingRole = 'player';
-        document.getElementById('gateNameSubtext').textContent = "This is how you'll show up in posts, comments, and on the scorecard.";
-        gateShowStep('gateStep2Name');
-        document.getElementById('nameGateInput').focus();
+        const [tid, idx] = btn.dataset.gatePlayer.split('|');
+        choosePlayerIdentity(tid, parseInt(idx,10));
       };
     });
   };
@@ -964,7 +969,8 @@ async function setMyName(){
 }
 
 function resetIdentity(){
-  myName = null; myRole = null; myTeamId = null; isAdminSession = false;
+  myName = null; myRole = null; myTeamId = null; myPlayerId = null; isAdminSession = false;
+  ['my-name','my-role','my-team-id','my-player-id'].forEach(k=>{ try{ devStore.removeItem('personal:'+k); }catch(e){} });
   document.getElementById('nameGate').style.display = 'flex';
   gateShowStep('gateStep1');
   updateAdminUI();
@@ -1648,6 +1654,9 @@ function renderScoreEntry(){
   if(!isAdminSession && myRole!=='player'){
     return `<div class="card"><div class="empty">Score entry is for players on a team. Check the Leaderboard tab for live scores from everyone.</div></div>`;
   }
+  if(!isAdminSession && myRole==='player' && !myTeamId){
+    return `<div class="card"><div class="empty">You're not on a ${TOURNAMENT_YEAR} team yet. Once the admin adds you, your scorecard shows up here.</div></div>`;
+  }
   if(!isAdminSession && myRole==='player' && myTeamId){
     scoreboardSelectedTeam = myTeamId;
   } else if(!scoreboardSelectedTeam || !teams.find(t=>t.id===scoreboardSelectedTeam)){
@@ -1864,20 +1873,292 @@ function renderScoreEntry(){
   `;
 }
 
+/* ---------------------------------------------------------
+   PLAYERS, ROSTER & TEAM BUILDER
+   - players (shared across years): [{id, name}] -- everyone who has
+     ever played. Names are entered once and reused every year.
+   - roster (per year): [{playerId, status:'active'|'withdrawn'}]
+   - teams keep `players` (names, used for display everywhere and kept
+     as-is in past years) plus `playerIds`, which the builder manages.
+     Names are refreshed from the players list whenever teams are saved.
+   Players sign in by picking their own name; their team is looked up
+   from the current year's teams, so moving someone moves their phone too.
+--------------------------------------------------------- */
+let players = [];
+let roster = [];
+let myPlayerId = null;
+
+// name matching uses normName() (letters only, lower-case) defined with the presence helpers
+function playerById(id){ return players.find(p=>p.id===id) || null; }
+function playerName(id){ const p = playerById(id); return p ? p.name : ''; }
+function teamOfPlayer(pid){ return teams.find(t=>(t.playerIds||[]).includes(pid)) || null; }
+function rosterEntry(pid){ return roster.find(r=>r.playerId===pid) || null; }
+function activeRosterIds(){ return roster.filter(r=>r.status!=='withdrawn').map(r=>r.playerId); }
+function unassignedPlayerIds(){ return activeRosterIds().filter(pid=>!teamOfPlayer(pid)); }
+function withdrawnPlayerIds(){ return roster.filter(r=>r.status==='withdrawn').map(r=>r.playerId); }
+function teamHasScores(tid){ return Object.values(scores[tid]||{}).some(Boolean); }
+function sortByName(ids){ return ids.slice().sort((a,b)=>playerName(a).localeCompare(playerName(b))); }
+
+async function loadPlayers(){
+  try{
+    const p = await window.storage.get('players', true);
+    players = p && p.value ? JSON.parse(p.value) : [];
+  }catch(e){ players = []; }
+}
+async function loadRoster(){
+  try{
+    const r = await window.storage.get('roster', true);
+    roster = r && r.value ? JSON.parse(r.value) : [];
+  }catch(e){ roster = []; }
+}
+// Find a player by name or add them to the shared list.
+function findOrCreatePlayer(name){
+  const n = String(name||'').trim().replace(/\s+/g,' ');
+  if(!n) return null;
+  let p = players.find(x=>normName(x.name)===normName(n));
+  if(!p){ p = {id: uid(), name: n}; players.push(p); }
+  return p;
+}
+// Keep each team's display names in step with its player IDs.
+function syncTeamNames(){
+  teams.forEach(t=>{
+    if(Array.isArray(t.playerIds)) t.players = t.playerIds.map(playerName).filter(Boolean);
+  });
+}
+async function saveRosterState({playersChanged=true, rosterChanged=true, teamsChanged=true}={}){
+  syncTeamNames();
+  const jobs = [];
+  if(playersChanged) jobs.push(save('players', JSON.stringify(players), true));
+  if(rosterChanged) jobs.push(save('roster', JSON.stringify(roster), true));
+  if(teamsChanged) jobs.push(save('teams', JSON.stringify(teams), true));
+  const ok = (await Promise.all(jobs)).every(r=>r!==false);
+  if(!ok) showToast("Couldn't save. Check your connection and try again.");
+  return ok;
+}
+
+/* First time the admin opens Teams & Groups for a year: build the shared
+   players list from every year's teams, and this year's roster from its
+   own teams, so nothing has to be retyped. */
+let rosterSetupDone = {};
+async function ensureRosterSetup(){
+  const y = TOURNAMENT_YEAR;
+  if(rosterSetupDone[y] || !canAdminEditYear() || teamsLoadFailed) return;
+  rosterSetupDone[y] = true;
+  let playersChanged = false, rosterChanged = false, teamsChanged = false;
+  if(!players.length && window.storage.yearMode && window.storage.yearMode()){
+    for(const yr of window.storage.years().slice().sort()){
+      try{
+        const raw = yr === y ? JSON.stringify(teams) : await window.storage.getForYear(yr, 'teams');
+        (raw ? JSON.parse(raw) : []).forEach(t=>(t.players||[]).forEach(n=>{ findOrCreatePlayer(n); playersChanged = true; }));
+      }catch(e){}
+    }
+  }
+  teams.forEach(t=>{
+    if(Array.isArray(t.playerIds)) return;
+    t.playerIds = (t.players||[]).map(n=>{ const before = players.length; const p = findOrCreatePlayer(n); if(players.length!==before) playersChanged = true; return p.id; });
+    teamsChanged = true;
+  });
+  teams.forEach(t=>(t.playerIds||[]).forEach(pid=>{
+    if(!rosterEntry(pid)){ roster.push({playerId: pid, status:'active'}); rosterChanged = true; }
+  }));
+  if(playersChanged || rosterChanged || teamsChanged){
+    await saveRosterState({playersChanged, rosterChanged, teamsChanged});
+  }
+}
+
+/* ---- bottom sheet used by the builder ---- */
+function openSheet(title, bodyHtml, wire){
+  closeSheet();
+  const sheet = document.createElement('div');
+  sheet.id = 'appSheet';
+  sheet.className = 'year-sheet-backdrop';
+  sheet.innerHTML = `<div class="year-sheet app-sheet" role="dialog" aria-label="${escapeHtml(title)}">
+    <div class="year-sheet-title">${escapeHtml(title)}</div>
+    <div class="app-sheet-body">${bodyHtml}</div>
+    <button class="tiny-btn" data-close-sheet type="button" style="margin-top:10px;">Close</button>
+  </div>`;
+  document.body.appendChild(sheet);
+  sheet.addEventListener('click', (e)=>{ if(e.target === sheet || e.target.closest('[data-close-sheet]')) closeSheet(); });
+  if(wire) wire(sheet);
+  return sheet;
+}
+function closeSheet(){ const s = document.getElementById('appSheet'); if(s) s.remove(); }
+
+function scoresWarning(teamList){
+  const scored = teamList.filter(t=>t && teamHasScores(t.id));
+  if(!scored.length) return true;
+  const names = scored.map(t=>`Team ${t.label}`).join(' and ');
+  return confirm(`${names} already ${scored.length>1?'have':'has'} scores entered.\n\nMove anyway? Scores stay with the team, not the player.`);
+}
+
+// Move a player: target is a team id, 'unassigned', or 'withdrawn'
+async function movePlayer(pid, target){
+  const from = teamOfPlayer(pid);
+  const to = (target !== 'unassigned' && target !== 'withdrawn') ? teams.find(t=>t.id===target) : null;
+  if(from && to && from.id === to.id) return;
+  if(!scoresWarning([from, to])) return;
+  if(from) from.playerIds = from.playerIds.filter(x=>x!==pid);
+  if(to) to.playerIds = (to.playerIds||[]).concat(pid);
+  let r = rosterEntry(pid);
+  if(!r){ r = {playerId: pid, status:'active'}; roster.push(r); }
+  r.status = target === 'withdrawn' ? 'withdrawn' : 'active';
+  if(await saveRosterState({playersChanged:false})){
+    const nm = playerName(pid);
+    showToast(target==='withdrawn' ? `${nm} withdrawn` : to ? `${nm} → Team ${to.label}` : `${nm} unassigned`);
+  }
+  closeSheet();
+  render();
+}
+
+function teamOptionRow(t, currentTid){
+  const names = (t.playerIds||[]).map(playerName).filter(Boolean);
+  return `<button class="year-sheet-row ${t.id===currentTid?'active':''}" data-sheet-team="${t.id}" type="button">
+    <span><b>Team ${escapeHtml(t.label)}</b>${names.length ? `<span class="sheet-row-sub">${escapeHtml(names.join(' · '))}</span>` : '<span class="sheet-row-sub">Empty</span>'}</span>
+    <span class="year-sheet-tag">${t.id===currentTid ? 'Current' : (names.length>=4 ? 'Full?' : '')}</span>
+  </button>`;
+}
+
+function openPlayerSheet(pid){
+  const name = playerName(pid);
+  const cur = teamOfPlayer(pid);
+  const withdrawn = (rosterEntry(pid)||{}).status === 'withdrawn';
+  const teamRows = teams.slice().sort((a,b)=>a.label.localeCompare(b.label)).map(t=>teamOptionRow(t, cur && cur.id)).join('');
+  openSheet(name, `
+    <div class="sheet-section-label">${withdrawn ? 'Reinstate onto a team' : 'Move to'}</div>
+    ${teamRows || '<div class="empty" style="padding:6px 0;">No teams yet.</div>'}
+    <button class="year-sheet-row" data-sheet-newteam type="button"><span><b>＋ New team</b><span class="sheet-row-sub">Starts Team ${escapeHtml(nextTeamLabel())} with ${escapeHtml(name)}</span></span></button>
+    ${cur || withdrawn ? `<button class="year-sheet-row" data-sheet-unassign type="button"><span><b>Unassigned</b><span class="sheet-row-sub">On the ${TOURNAMENT_YEAR} roster, no team</span></span></button>` : ''}
+    <div class="sheet-actions">
+      ${withdrawn ? '' : `<button class="tiny-btn" data-sheet-withdraw type="button">Withdraw from ${TOURNAMENT_YEAR}</button>`}
+      <button class="tiny-btn" data-sheet-rename type="button">Rename</button>
+      ${!cur ? `<button class="tiny-btn danger-link" data-sheet-remove type="button">Remove from ${TOURNAMENT_YEAR}</button>` : ''}
+    </div>`, (sh)=>{
+    sh.querySelectorAll('[data-sheet-team]').forEach(b=>b.onclick = ()=>movePlayer(pid, b.dataset.sheetTeam));
+    const nt = sh.querySelector('[data-sheet-newteam]');
+    if(nt) nt.onclick = async ()=>{
+      if(!scoresWarning([cur])) return;
+      const t = {id: uid(), label: nextTeamLabel(), groupId: null, players: [], playerIds: []};
+      teams.push(t);
+      if(cur) cur.playerIds = cur.playerIds.filter(x=>x!==pid);
+      t.playerIds.push(pid);
+      const r = rosterEntry(pid) || (roster.push({playerId: pid, status:'active'}), rosterEntry(pid));
+      r.status = 'active';
+      if(await saveRosterState({playersChanged:false})) showToast(`Team ${t.label} started`);
+      closeSheet(); render();
+    };
+    const un = sh.querySelector('[data-sheet-unassign]');
+    if(un) un.onclick = ()=>movePlayer(pid, 'unassigned');
+    const wd = sh.querySelector('[data-sheet-withdraw]');
+    if(wd) wd.onclick = ()=>{
+      if(!confirm(`Withdraw ${name} from ${TOURNAMENT_YEAR}?\n\nThey stay in the ${TOURNAMENT_YEAR} record as withdrawn and can be reinstated.`)) return;
+      movePlayer(pid, 'withdrawn');
+    };
+    sh.querySelector('[data-sheet-rename]').onclick = async ()=>{
+      const v = prompt('Player name:', name);
+      if(v === null) return;
+      const n = v.trim().replace(/\s+/g,' ');
+      if(!n || n === name) return;
+      if(players.some(p=>p.id!==pid && normName(p.name)===normName(n))){ alert(`There's already a player named ${n}.`); return; }
+      playerById(pid).name = n;
+      if(await saveRosterState({rosterChanged:false})) showToast('Name updated');
+      closeSheet(); render();
+    };
+    const rm = sh.querySelector('[data-sheet-remove]');
+    if(rm) rm.onclick = async ()=>{
+      if(!confirm(`Remove ${name} from the ${TOURNAMENT_YEAR} roster?\n\nThey stay on the players list for other years.`)) return;
+      roster = roster.filter(r=>r.playerId!==pid);
+      if(await saveRosterState({playersChanged:false, teamsChanged:false})) showToast(`${name} removed from ${TOURNAMENT_YEAR}`);
+      closeSheet(); render();
+    };
+  });
+}
+
+function openAddPlayersSheet(){
+  const onRoster = new Set(roster.map(r=>r.playerId));
+  const avail = players.filter(p=>!onRoster.has(p.id)).sort((a,b)=>a.name.localeCompare(b.name));
+  openSheet(`Add players to ${TOURNAMENT_YEAR}`, `
+    ${avail.length ? `<div class="sheet-section-label">Past players</div>
+      <div class="sheet-checklist">${avail.map(p=>`<label class="sheet-check"><input type="checkbox" value="${p.id}"><span>${escapeHtml(p.name)}</span></label>`).join('')}</div>` : ''}
+    <div class="sheet-section-label">New player</div>
+    <div class="sheet-new-row"><input type="text" id="newPlayerName" placeholder="First and last name" maxlength="40"></div>
+    <button class="btn block" data-sheet-add type="button" style="margin-top:12px;">Add to ${TOURNAMENT_YEAR}</button>`, (sh)=>{
+    sh.querySelector('[data-sheet-add]').onclick = async ()=>{
+      const picked = Array.from(sh.querySelectorAll('.sheet-check input:checked')).map(i=>i.value);
+      const newName = (sh.querySelector('#newPlayerName').value||'').trim();
+      let playersChanged = false;
+      if(newName){
+        const before = players.length;
+        const p = findOrCreatePlayer(newName);
+        if(players.length !== before) playersChanged = true;
+        if(!picked.includes(p.id)) picked.push(p.id);
+      }
+      if(!picked.length){ showToast('Pick a player or type a new name'); return; }
+      picked.forEach(pid=>{ if(!rosterEntry(pid)) roster.push({playerId: pid, status:'active'}); });
+      if(await saveRosterState({playersChanged, teamsChanged:false})) showToast(`Added ${picked.length} player${picked.length===1?'':'s'}`);
+      closeSheet(); render();
+    };
+  });
+}
+
+// New team inside a group (or no group), choosing players from Unassigned
+function openNewTeamSheet(groupId){
+  const un = sortByName(unassignedPlayerIds());
+  const label = nextTeamLabel();
+  openSheet(`New Team ${label}`, un.length ? `
+    <div class="sheet-section-label">Pick players from Unassigned</div>
+    <div class="sheet-checklist">${un.map(pid=>`<label class="sheet-check"><input type="checkbox" value="${pid}"><span>${escapeHtml(playerName(pid))}</span></label>`).join('')}</div>
+    <button class="btn block" data-sheet-create type="button" style="margin-top:12px;">Create Team ${escapeHtml(label)}</button>`
+    : `<div class="empty" style="padding:8px 0;">Everyone on the roster is already on a team. Add players first, or create an empty team.</div>
+       <button class="btn block secondary" data-sheet-create type="button" style="margin-top:8px;">Create empty Team ${escapeHtml(label)}</button>`, (sh)=>{
+    sh.querySelector('[data-sheet-create]').onclick = async ()=>{
+      const picked = Array.from(sh.querySelectorAll('.sheet-check input:checked')).map(i=>i.value);
+      teams.push({id: uid(), label, groupId: groupId || null, players: [], playerIds: picked});
+      if(await saveRosterState({playersChanged:false, rosterChanged:false})) showToast(`Team ${label} created`);
+      closeSheet(); render();
+    };
+  });
+}
+
+function openTeamGroupSheet(tid){
+  const t = teams.find(x=>x.id===tid); if(!t) return;
+  openSheet(`Team ${t.label} · Tee time`, groups.map(g=>`
+    <button class="year-sheet-row ${t.groupId===g.id?'active':''}" data-sheet-group="${g.id}" type="button">
+      <span><b>${escapeHtml(g.label)}</b><span class="sheet-row-sub">${g.teeTime ? escapeHtml(g.teeTime)+' · ' : ''}Starts on #${parseInt(g.startHole,10)||1} · ${teamsInGroup(g.id).length} team${teamsInGroup(g.id).length===1?'':'s'}</span></span>
+      <span class="year-sheet-tag">${t.groupId===g.id ? 'Current' : ''}</span>
+    </button>`).join('') + `<button class="year-sheet-row ${!t.groupId?'active':''}" data-sheet-group="" type="button"><span><b>No group yet</b></span></button>`, (sh)=>{
+    sh.querySelectorAll('[data-sheet-group]').forEach(b=>b.onclick = async ()=>{
+      t.groupId = b.dataset.sheetGroup || null;
+      if(await saveRosterState({playersChanged:false, rosterChanged:false})) showToast(`Team ${t.label} moved`);
+      closeSheet(); render();
+    });
+  });
+}
+
+function playerChip(pid, extraClass){
+  return `<button class="player-chip ${extraClass||''}" data-player-chip="${pid}" type="button">${escapeHtml(playerName(pid) || '?')}</button>`;
+}
+function teamPlayersHtml(t){
+  if(Array.isArray(t.playerIds)){
+    return t.playerIds.length ? t.playerIds.map(pid=>playerChip(pid)).join('') : '<span class="team-empty-note">No players yet. Tap a player above to add them.</span>';
+  }
+  return escapeHtml((t.players||[]).join(' · '));
+}
+
 function renderTeamManager(){
-  const groupBlocks = groups.map(g=>{
-    const gt = teamsInGroup(g.id);
-    const teamRows = gt.map(t=>`
+  const un = sortByName(unassignedPlayerIds());
+  const wd = sortByName(withdrawnPlayerIds());
+  const teamRow = (t)=>`
       <div class="team-row">
         <span class="team-badge">${escapeHtml(t.label)}</span>
-        <div class="team-row-info">
-          <div class="team-row-players">${escapeHtml((t.players||[]).join(' · '))}</div>
-        </div>
+        <div class="team-row-info"><div class="team-row-players chip-wrap">${teamPlayersHtml(t)}</div>
+          ${teamHasScores(t.id) ? '<div class="team-row-note">Has scores</div>' : ''}</div>
         <div class="team-row-actions">
-          <button class="tiny-btn" data-edit-team="${t.id}">Edit</button>
+          <button class="tiny-btn" data-team-group="${t.id}">Tee time</button>
           <button class="tiny-btn" data-remove-team="${t.id}">Remove</button>
         </div>
-      </div>`).join('') || `<div class="empty" style="padding:8px 0;">No teams in this group yet.</div>`;
+      </div>`;
+  const groupBlocks = groups.map(g=>{
+    const gt = teamsInGroup(g.id).slice().sort((a,b)=>a.label.localeCompare(b.label));
     return `<div class="group-block">
       <div class="group-block-head">
         <div>
@@ -1889,39 +2170,98 @@ function renderTeamManager(){
           <button class="tiny-btn" data-remove-group="${g.id}">Remove</button>
         </div>
       </div>
-      ${teamRows}
-      <button class="btn secondary small" style="margin-top:10px;" data-add-team-to="${g.id}">+ Add team</button>
+      ${gt.map(teamRow).join('') || `<div class="empty" style="padding:8px 0;">No teams in this group yet.</div>`}
+      <button class="btn secondary small" style="margin-top:10px;" data-add-team-to="${g.id}">+ New team</button>
     </div>`;
   }).join('');
-
-  const un = unassignedTeams();
-  const unassignedHtml = un.length ? `
+  const loose = unassignedTeams().slice().sort((a,b)=>a.label.localeCompare(b.label));
+  const looseHtml = loose.length ? `
     <div class="group-block" style="border-style:dashed;">
-      <div class="group-block-head"><div class="group-block-title">Unassigned teams</div></div>
-      ${un.map(t=>`
-        <div class="team-row">
-          <span class="team-badge">${escapeHtml(t.label)}</span>
-          <div class="team-row-info">
-            <div class="team-row-players">${escapeHtml((t.players||[]).join(' · '))}</div>
-          </div>
-          <div class="team-row-actions">
-            <button class="tiny-btn" data-edit-team="${t.id}">Edit</button>
-            <button class="tiny-btn" data-remove-team="${t.id}">Remove</button>
-          </div>
-        </div>`).join('')}
+      <div class="group-block-head"><div class="group-block-title">Teams without a tee time</div></div>
+      ${loose.map(teamRow).join('')}
     </div>` : '';
 
   return `
+    <div class="card roster-card">
+      <div class="section-title" style="font-size:16px;">${TOURNAMENT_YEAR} Players</div>
+      <div class="section-desc">Tap a player to put them on a team, move them, or withdraw them.</div>
+      <div class="roster-subhead">Unassigned <span>${un.length}</span></div>
+      <div class="chip-wrap">${un.length ? un.map(pid=>playerChip(pid, 'unassigned')).join('') : `<span class="team-empty-note">${roster.length ? 'Everyone is on a team.' : 'No players on the roster yet.'}</span>`}</div>
+      <button class="btn secondary small" id="addRosterPlayersBtn" style="margin-top:10px;">+ Add players</button>
+      ${wd.length ? `<div class="roster-subhead" style="margin-top:14px;">Withdrawn <span>${wd.length}</span></div>
+        <div class="chip-wrap">${wd.map(pid=>playerChip(pid, 'withdrawn')).join('')}</div>` : ''}
+    </div>
     <div class="card">
       <div class="section-title" style="font-size:16px;">Groups &amp; Tee Times</div>
       <div class="section-desc">Each group plays together at one tee time and can hold multiple teams.</div>
       ${groupBlocks}
-      ${unassignedHtml}
+      ${looseHtml}
       <button class="btn block" id="addGroupBtn" style="margin-top:4px;">+ Add group</button>
-      <button class="btn secondary block" id="addUnassignedTeamBtn" style="margin-top:8px;">+ Add team (no group yet)</button>
+      <button class="btn secondary block" id="addUnassignedTeamBtn" style="margin-top:8px;">+ New team (no tee time yet)</button>
     </div>
   `;
 }
+
+/* ---- sign-in: players pick their own name ---- */
+// Who's on this year's teams, in team order
+function gatePlayerList(){
+  return teams.slice().sort((a,b)=>a.label.localeCompare(b.label)).map(t=>({
+    team: t,
+    people: (t.players||[]).map((n,i)=>({name: n, pid: (t.playerIds||[])[i] || null})).filter(p=>p.name)
+  }));
+}
+async function choosePlayerIdentity(teamId, idx){
+  const t = teams.find(x=>x.id===teamId); if(!t) return;
+  const name = (t.players||[])[idx]; if(!name) return;
+  myName = name; myRole = 'player'; myTeamId = t.id; myPlayerId = (t.playerIds||[])[idx] || null;
+  await save('my-name', myName, false);
+  await save('my-role', myRole, false);
+  await save('my-team-id', myTeamId, false);
+  if(myPlayerId) await save('my-player-id', myPlayerId, false);
+  document.getElementById('nameGate').style.display = 'none';
+  updateAdminUI();
+  render();
+  showToast(`Welcome, ${myName.split(' ')[0]} · Team ${t.label}`);
+}
+/* Re-find this phone's player on the current year's teams. Follows the
+   admin's moves, and matches older phones (name + team only) by name.
+   At startup, a player who isn't on any current team goes back to the
+   name picker. */
+async function resolveMyIdentity(atStartup){
+  if(myRole !== 'player' || teamsLoadFailed || viewingPastYear()) return;
+  let t = null;
+  if(myPlayerId){
+    t = teamOfPlayer(myPlayerId);
+    const nm = playerName(myPlayerId);
+    if(nm && nm !== myName){ myName = nm; save('my-name', nm, false); }
+  }
+  if(!t && myName){
+    const n = normName(myName);
+    t = teams.find(x=>(x.players||[]).some(p=>normName(p)===n)) || null;
+    if(t){
+      const i = t.players.findIndex(p=>normName(p)===n);
+      const pid = (t.playerIds||[])[i];
+      if(pid && pid !== myPlayerId){ myPlayerId = pid; save('my-player-id', pid, false); }
+    }
+  }
+  if(!t && !myPlayerId && myTeamId) t = teams.find(x=>x.id===myTeamId) || null;   // legacy phone, same year
+  const newTid = t ? t.id : null;
+  if(newTid !== myTeamId){
+    myTeamId = newTid;
+    if(newTid) save('my-team-id', newTid, false);
+  }
+  if(atStartup && !t && teams.length){
+    myRole = null;   // shows the picker; name is kept for guests
+  }
+}
+
+document.addEventListener('click', (e)=>{
+  const chip = e.target.closest('[data-player-chip]');
+  if(chip && isAdminSession && canAdminEditYear()){ openPlayerSheet(chip.dataset.playerChip); return; }
+  if(e.target.closest('#addRosterPlayersBtn') && isAdminSession){ openAddPlayersSheet(); return; }
+  const tg = e.target.closest('[data-team-group]');
+  if(tg && isAdminSession){ openTeamGroupSheet(tg.dataset.teamGroup); return; }
+});
 
 /* ---------------------------------------------------------
    HOLES
@@ -2883,7 +3223,7 @@ async function uploadVideo(file){
 function attachHandlers(){
   // scorecard mode switch
   document.querySelectorAll('[data-mode]').forEach(el=>{
-    el.onclick = ()=>{ scorecardMode = el.dataset.mode; render(); };
+    el.onclick = async ()=>{ scorecardMode = el.dataset.mode; render(); if(scorecardMode==='manage'){ await ensureRosterSetup(); render(); } };
   });
 
   // score entry: group filter + team select
@@ -3035,14 +3375,6 @@ function attachHandlers(){
   });
 
   // team & group management
-  const askPlayers = (existing)=>{
-    const raw = prompt("Player names, separated by commas (2-3 players):", existing ? existing.join(', ') : '');
-    if(raw===null) return null;
-    const names = raw.split(',').map(s=>s.trim()).filter(Boolean);
-    if(names.length<2 || names.length>3){ alert('Please enter 2 or 3 player names.'); return undefined; }
-    return names;
-  };
-
   document.getElementById('addGroupBtn') && (document.getElementById('addGroupBtn').onclick = async ()=>{
     const label = prompt("Group name:", `Group ${groups.length+1}`);
     if(!label || !label.trim()) return;
@@ -3084,44 +3416,16 @@ function attachHandlers(){
   });
 
   document.querySelectorAll('[data-add-team-to]').forEach(el=>{
-    el.onclick = async ()=>{
-      const players = askPlayers();
-      if(!players || players===undefined) return;
-      const t = {id: uid(), label: nextTeamLabel(), groupId: el.dataset.addTeamTo, players};
-      teams.push(t);
-      scoreboardSelectedTeam = t.id;
-      await save('teams', JSON.stringify(teams), true);
-      render();
-      showToast(`Team ${t.label} added`);
-    };
+    el.onclick = async ()=>{ await ensureRosterSetup(); openNewTeamSheet(el.dataset.addTeamTo); };
   });
   const addUnassignedTeamBtn = document.getElementById('addUnassignedTeamBtn');
-  if(addUnassignedTeamBtn) addUnassignedTeamBtn.onclick = async ()=>{
-    const players = askPlayers();
-    if(!players || players===undefined) return;
-    const t = {id: uid(), label: nextTeamLabel(), groupId: null, players};
-    teams.push(t);
-    scoreboardSelectedTeam = t.id;
-    await save('teams', JSON.stringify(teams), true);
-    render();
-    showToast(`Team ${t.label} added`);
-  };
-  document.querySelectorAll('[data-edit-team]').forEach(el=>{
-    el.onclick = async ()=>{
-      const t = teams.find(t=>t.id===el.dataset.editTeam);
-      if(!t) return;
-      const players = askPlayers(t.players);
-      if(players===null || players===undefined) return;
-      t.players = players;
-      await save('teams', JSON.stringify(teams), true);
-      render();
-      showToast('Team updated');
-    };
-  });
+  if(addUnassignedTeamBtn) addUnassignedTeamBtn.onclick = async ()=>{ await ensureRosterSetup(); openNewTeamSheet(null); };
   document.querySelectorAll('[data-remove-team]').forEach(el=>{
     el.onclick = async ()=>{
-      if(!confirm('Remove this team? Its scores will be deleted.')) return;
       const tid = el.dataset.removeTeam;
+      const tm = teams.find(t=>t.id===tid);
+      const msg = `Remove Team ${tm ? tm.label : ''}? Its players go back to Unassigned.` + (teamHasScores(tid) ? `\n\nThis team has scores entered. They will be deleted.` : '');
+      if(!confirm(msg)) return;
       teams = teams.filter(t=>t.id!==tid);
       delete scores[tid];
       if(scoreboardSelectedTeam===tid) scoreboardSelectedTeam = null;
@@ -4673,7 +4977,7 @@ function wireYearsAdmin(){
     const p = document.getElementById('identityPanel');
     document.getElementById('backupPanel').style.display = 'none';
     if(p.style.display==='none'){
-      const roleLabel = isAdminSession ? 'Admin (this session)' : (myRole==='player' ? `Player, Team ${(teams.find(t=>t.id===myTeamId)||{}).label||'?'}` : myRole==='guest' ? 'Guest' : 'Not signed in');
+      const roleLabel = isAdminSession ? 'Admin (this session)' : (myRole==='player' ? `Player, ${(teams.find(t=>t.id===myTeamId) ? 'Team '+teams.find(t=>t.id===myTeamId).label : 'no team yet')}` : myRole==='guest' ? 'Guest' : 'Not signed in');
       document.getElementById('identitySummary').textContent = myName ? `${myName} · ${roleLabel}` : 'Not signed in yet.';
       document.getElementById('identityAdminBtn').style.display = isAdminSession ? 'none' : 'block';
       p.style.display = 'block';

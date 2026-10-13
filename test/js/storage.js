@@ -80,6 +80,7 @@ window.devStore = (function(){
     const YEAR_KEYS = new Set([
       'teams', 'groups', 'contests', 'extra-contests',
       'scores-locked', 'contests-locked', 'event-info', 'hero-year',
+      'roster',                     // this year's players: [{playerId, status}]
       'team-scores', 'feed-posts'   // old single-blob formats, still read once for migration
     ]);
     const YEAR_PREFIXES = ['team-score:', 'feed-post:'];
@@ -299,6 +300,11 @@ window.devStore = (function(){
       if(!config || !config.years || !config.years[y]) throw new Error(`${y} doesn't exist.`);
       await window.storage.saveConfig({...config, currentYear: y});
       activeYear = y;
+    };
+    // Read a year-scoped value from a specific year (used to gather past rosters).
+    window.storage.getForYear = async (y, key)=>{
+      const snap = await getDoc(doc(yearCol(y), key));
+      return snap.exists() ? snap.data().value : null;
     };
     // Write the year-scoped event details for a specific year (used by Create Year).
     window.storage.setForYear = async (y, key, value)=>{
