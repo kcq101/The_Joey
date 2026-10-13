@@ -2054,19 +2054,24 @@ function renderFeed(){
     </div>`;
   }
 
-  const visiblePosts = feedFilterTag==='all' ? feedPosts : feedPosts.filter(p=>(p.tags||[]).includes(feedFilterTag));
+  const visiblePosts = withAutoPostFilter(feedFilterTag==='all' ? feedPosts : feedPosts.filter(p=>(p.tags||[]).includes(feedFilterTag)));
   const posts = visiblePosts.length===0
-    ? `<div class="card"><div class="empty">${feedFilterTag==='all' ? 'No posts yet. Be the first to share a shot of the day.' : `No posts tagged #${feedFilterTag} yet.`}</div></div>`
+    ? `<div class="card"><div class="empty">${feedFilterTag!=='all' ? `No posts tagged #${feedFilterTag} yet.` : !showAutoPosts && feedPosts.length ? 'No player posts yet. Be the first to share a shot of the day.' : 'No posts yet. Be the first to share a shot of the day.'}</div></div>`
     : `<div class="card">${visiblePosts.slice().reverse().map(renderPost).join('')}</div>`;
   // Current year's feed sits under its own collapsible header, styled like
   // the past-year sections below it
   const feedYear = (window.storage.currentYear && window.storage.currentYear()) || TOURNAMENT_YEAR;
-  const countLabel = feedPosts.length ? `<span class="past-feed-count"> · ${feedPosts.length} post${feedPosts.length===1?'':'s'}</span>` : '';
+  const shownCount = withAutoPostFilter(feedPosts).length;
+  const countLabel = shownCount ? `<span class="past-feed-count"> · ${shownCount} post${shownCount===1?'':'s'}</span>` : '';
   const currentHead = `<div class="card past-feed current-feed ${currentFeedOpen ? 'open' : ''}">
     <button class="past-feed-head" data-current-feed type="button">
       <span>${feedYear} Tournament Feed${countLabel}</span><span class="past-feed-caret">${currentFeedOpen ? '▾' : '▸'}</span>
     </button></div>`;
-  return adminAutoPostPanel + currentHead + (currentFeedOpen ? composer + filterHtml + posts : '') + renderPastFeeds();
+  const autoToggle = `<div class="feed-auto-toggle" role="group" aria-label="Which posts to show">
+    <button type="button" data-auto-posts="show" class="${showAutoPosts ? 'active' : ''}" aria-pressed="${showAutoPosts}">All Posts</button>
+    <button type="button" data-auto-posts="hide" class="${showAutoPosts ? '' : 'active'}" aria-pressed="${!showAutoPosts}">Player Posts Only</button>
+  </div>`;
+  return adminAutoPostPanel + autoToggle + currentHead + (currentFeedOpen ? composer + filterHtml + posts : '') + renderPastFeeds();
 }
 function renderPost(post){
   const heartIcon = post.likedByMe
@@ -4415,6 +4420,18 @@ document.addEventListener('click', (e)=>{
    existing like/reply/edit helper saves back to that year unchanged. */
 let pastFeeds = {};   // { year: {open, loading, posts:[], failed} }
 let currentFeedOpen = true;   // current year's feed section (session only)
+// Show/hide auto posts (birdies, bogeys, contest updates). Starts on "All
+// Posts" every time the app opens.
+let showAutoPosts = true;
+function withAutoPostFilter(list){ return showAutoPosts ? list : list.filter(p=>!p.system); }
+document.addEventListener('click', (e)=>{
+  const b = e.target.closest('[data-auto-posts]');
+  if(!b) return;
+  const show = b.dataset.autoPosts === 'show';
+  if(show === showAutoPosts) return;
+  showAutoPosts = show;
+  render();
+});
 document.addEventListener('click', (e)=>{
   if(!e.target.closest('[data-current-feed]')) return;
   currentFeedOpen = !currentFeedOpen;
@@ -4442,11 +4459,12 @@ function renderPastFeeds(){
   const cur = window.storage.currentYear();
   return window.storage.years().filter(y=>y !== cur).map(y=>{
     const pf = pastFeeds[y] || {};
-    const count = (pf.posts && pf.posts.length) ? ` · ${pf.posts.length} posts` : '';
+    const shown = withAutoPostFilter(pf.posts || []);
+    const count = shown.length ? ` · ${shown.length} post${shown.length===1?'':'s'}` : '';
     const body = !pf.open ? '' : pf.loading ? `<div class="empty">Loading ${y}…</div>`
       : pf.failed ? `<div class="empty">Couldn't load the ${y} feed. <button class="tiny-btn" data-past-feed="${y}" type="button">Try again</button></div>`
-      : pf.posts.length ? pf.posts.slice().reverse().map(renderPost).join('')
-      : `<div class="empty">No posts from ${y}.</div>`;
+      : shown.length ? shown.slice().reverse().map(renderPost).join('')
+      : `<div class="empty">${pf.posts.length ? `No player posts from ${y}.` : `No posts from ${y}.`}</div>`;
     return `<div class="card past-feed ${pf.open ? 'open' : ''}">
       <button class="past-feed-head" data-past-feed="${y}" type="button">
         <span>${y} Tournament Feed<span class="past-feed-count">${count}</span></span><span class="past-feed-caret">${pf.open ? '▾' : '▸'}</span>
