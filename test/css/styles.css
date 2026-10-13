@@ -1188,3 +1188,11 @@
 .feed-auto-toggle button.active{box-shadow:0 1px 3px rgba(0,0,0,.15);}
 .feed-auto-toggle button[data-auto-posts="show"].active{background:#CFE8D9;color:#0B5A3C;}
 .feed-auto-toggle button[data-auto-posts="hide"].active{background:#C9D3E1;color:#2E4470;}
+/* feed toggle, round 2: recessed light-gray track, raised darker pills */
+.feed-auto-toggle{background:linear-gradient(180deg,#D3D5CF 0%,#E1E2DD 100%);border:1px solid #C4C7BF;
+  box-shadow:inset 0 2px 4px rgba(0,0,0,.14), 0 1px 0 rgba(255,255,255,.7);}
+.feed-auto-toggle button{color:#4A524D;}
+.feed-auto-toggle button.active{color:#fff;text-shadow:0 1px 0 rgba(0,0,0,.25);
+  box-shadow:0 2px 4px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.3);}
+.feed-auto-toggle button[data-auto-posts="show"].active{background:linear-gradient(180deg,#3E9E6E 0%,#2C7F55 100%);color:#fff;}
+.feed-auto-toggle button[data-auto-posts="hide"].active{background:linear-gradient(180deg,#7488A6 0%,#56698A 100%);color:#fff;}
