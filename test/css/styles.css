@@ -1148,3 +1148,6 @@
 .hero-fact{align-items:flex-start;}
 .hero-fact-ico{margin-top:1px;}
 .hero-fact-date{flex:0 0 auto;white-space:nowrap;}
+/* scorecard header: breathing room under "The Joey", bigger year chip */
+.scorecard-header-year{margin-top:10px;}
+.scorecard-header-year .year-switch-chip{margin-left:0;font-size:15.5px;padding:7px 15px;}
