@@ -83,7 +83,7 @@ window.devStore = (function(){
       'roster',                     // this year's players: [{playerId, status}]
       'team-scores', 'feed-posts'   // old single-blob formats, still read once for migration
     ]);
-    const YEAR_PREFIXES = ['team-score:', 'feed-post:'];
+    const YEAR_PREFIXES = ['team-score:', 'feed-post:', 'course-hole:'];   // course-hole: that year's own course
     const isYearKey = (key)=> YEAR_KEYS.has(key) || YEAR_PREFIXES.some(p=>key.startsWith(p));
 
     // ---- year config ----
@@ -130,8 +130,14 @@ window.devStore = (function(){
     // teams, groups, event details, side contests -- but never scored.
     // The app only shows those setup controls to the admin.
     const isScoreKey = (k)=> k.startsWith('team-score') || k === 'team-scores' || k === 'scores-locked';
+    const yearStatus = (y)=> (config && config.years && config.years[y] && config.years[y].status) || null;
     const assertWritable = (raw)=>{
-      const {key} = parseKey(raw);
+      const {year, key} = parseKey(raw);
+      // A year marked Final is a record: only feed likes/replies/edits still save.
+      const target = year || (key.startsWith('feed-post') ? currentYearNum() : activeYear);
+      if(yearMode() && isYearKey(key) && !key.startsWith('feed-post') && yearStatus(target) === 'final'){
+        throw new Error(`${target} is marked final`);
+      }
       if(viewingPast() && isYearKey(key) && !key.startsWith('feed-post')){
         const upcoming = activeYear > currentYearNum();
         if(upcoming && !isScoreKey(key)) return;
@@ -305,6 +311,20 @@ window.devStore = (function(){
     window.storage.getForYear = async (y, key)=>{
       const snap = await getDoc(doc(yearCol(y), key));
       return snap.exists() ? snap.data().value : null;
+    };
+    window.storage.yearStatus = yearStatus;
+    window.storage.isFinal = (y)=> yearStatus(Number(y)) === 'final';
+    // Mark a year Final (locked record) or reopen it.
+    window.storage.setYearStatus = async (y, status)=>{
+      y = Number(y);
+      if(!config || !config.years || !config.years[y]) throw new Error(`${y} doesn't exist.`);
+      await window.storage.saveConfig({...config, years: {...config.years, [y]: {...config.years[y], status}}});
+    };
+    // Write a whole course (18 holes) into a specific year.
+    window.storage.saveCourseForYear = async (y, holes)=>{
+      const batch = writeBatch(db);
+      holes.forEach(h=>batch.set(doc(yearCol(y), 'course-hole:' + h.number), {value: JSON.stringify(h), updatedAt: Date.now()}));
+      await batch.commit();
     };
     // Write the year-scoped event details for a specific year (used by Create Year).
     window.storage.setForYear = async (y, key, value)=>{

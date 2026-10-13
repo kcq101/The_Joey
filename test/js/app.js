@@ -73,7 +73,23 @@ let trophyIconUrl = null;   // admin-uploaded silver trophy image used on the ch
    easily, and the whole write silently fails. Splitting per-hole
    keeps each document comfortably under that limit on its own.
 --------------------------------------------------------- */
+/* Each year can have its own course (course-hole:1..18 in that year).
+   A year without one uses the shared default course (hole-config:*),
+   which is the 2026 course. The first edit to a year's holes copies the
+   whole course into that year, so other years never change. */
+let holesFromYear = false;
 async function loadAllHoles(){
+  holesFromYear = false;
+  if(window.storage.yearMode && window.storage.yearMode()){
+    try{
+      const own = await window.storage.listWithValues('course-hole:', true);
+      const items = (own && own.items) || [];
+      if(items.length){
+        const hs = items.map(({value})=>{ try{ return JSON.parse(value); }catch(e){ return null; } }).filter(Boolean).sort((a,b)=>a.number-b.number);
+        if(hs.length){ holesFromYear = true; return hs; }
+      }
+    }catch(e){}
+  }
   const byNumber = {};
   // one-time migration: pull in the old single-blob format if present
   try{
@@ -102,7 +118,20 @@ async function loadAllHoles(){
 }
 
 async function saveHole(h){
+  if(window.storage.yearMode && window.storage.yearMode()){
+    if(!holesFromYear){
+      // first change for this year: give the year its own copy of the course
+      try{ await window.storage.saveCourseForYear(TOURNAMENT_YEAR, holesConfig); holesFromYear = true; flagSaveIssue(false); }
+      catch(e){ console.error('course copy failed', e); flagSaveIssue(true); showToast(e && e.message ? e.message : "Couldn't save the hole"); }
+      return;
+    }
+    return save('course-hole:' + h.number, JSON.stringify(h), true);
+  }
   await save('hole-config:' + h.number, JSON.stringify(h), true);
+}
+function blankCourse(){
+  return Array.from({length:18}, (_,i)=>({number:i+1, par:4, yards:0, handicap:i+1, shape:'straight',
+    contestType:null, contestName:null, photo:'', description:'', reticles:[]}));
 }
 
 /* ---------------------------------------------------------
@@ -229,7 +258,7 @@ async function loadYearData(includeLegacy){
     // preview) -- seed the default Practice Green contest either way so it's
     // never just missing. Past years are read-only, so only seed in memory there.
     extraContests = [{id:'golden-boy', name:'The Golden Boy', location:'Practice Green', winner:'', distance:'', finalized:false}];
-    if(!viewingPastYear()){ try{ await save('extra-contests', JSON.stringify(extraContests), true); }catch(e){} }
+    if(!viewingPastYear() && !yearIsFinal()){ try{ await save('extra-contests', JSON.stringify(extraContests), true); }catch(e){} }
   }
 
   try{
@@ -385,6 +414,7 @@ function applyPendingScores(target){
   });
 }
 function saveHoleScore(tid, hole){
+  if(yearIsFinal() && !viewingPastYear()){ showToast(`${TOURNAMENT_YEAR} is marked final. Scores are locked.`); return; }
   if(viewingPastYear()){ showToast(viewingUpcomingYear() ? `${TOURNAMENT_YEAR} hasn't started yet. Scores open once it's the current year.` : `${TOURNAMENT_YEAR} is a previous year. Scores are view-only.`); return; }
   if(scoresLocked){ showToast('Scores are final — ask an admin to unlock'); return; }
   const key = tid + '|' + hole;
@@ -1534,12 +1564,12 @@ function contestRowIcon(name){
 }
 
 function renderContestSummary(){
-  const canSetWinners = !viewingPastYear() && (isAdminSession || (myRole==='player' && !contestsLocked));
+  const canSetWinners = !scoringBlocked() && (isAdminSession || (myRole==='player' && !contestsLocked));
 
   function winnerCell(winner, finalized, actionAttr, declareAttr, reopenAttr){
     if(finalized){
       return `<span class="contest-winner-pill winner-final">🏆 ${escapeHtml(winner)}</span>`
-        + (isAdminSession && !viewingPastYear() ? `<button class="tiny-btn" ${reopenAttr}>Reopen</button>` : '');
+        + (isAdminSession && !scoringBlocked() ? `<button class="tiny-btn" ${reopenAttr}>Reopen</button>` : '');
     }
     if(winner){
       const pill = canSetWinners
@@ -1631,7 +1661,7 @@ function renderScorecard(){
     }
     return lockBannerHtml() + renderScoreEntry();
   }
-  if(viewingPastYear() && !viewingUpcomingYear()) return lockBannerHtml() + renderScoreEntry();
+  if((viewingPastYear() && !viewingUpcomingYear()) || yearIsFinal()) return lockBannerHtml() + renderScoreEntry();
   const content = scorecardMode==='manage' ? renderTeamManager() : renderScoreEntry();
   const modeSwitch = `
     <div class="card">
@@ -1673,7 +1703,7 @@ function renderScoreEntry(){
     </button>`).join('');
 
   const team = teams.find(t=>t.id===scoreboardSelectedTeam);
-  const canEditTeam = !scoresLocked && !viewingPastYear() && (isAdminSession || (myRole==='player' && myTeamId===team?.id));
+  const canEditTeam = !scoresLocked && !scoringBlocked() && (isAdminSession || (myRole==='player' && myTeamId===team?.id));
   const isYourTeamView = myRole==='player' && team && myTeamId===team.id;
   let gridHtml = '';
   if(team){
@@ -2293,14 +2323,14 @@ function renderHoles(idxOverride){
   const contestLabel = h.contestName || (h.contestType==='ctp' ? 'Closest to the Pin' : h.contestType==='longdrive' ? 'Longest Drive' : null);
   let contestHtml = '';
   if(contestLabel){
-    const canSet = !viewingPastYear() && (isAdminSession || (myRole==='player' && !contestsLocked));
+    const canSet = !scoringBlocked() && (isAdminSession || (myRole==='player' && !contestsLocked));
     let actionHtml;
     if(contest.finalized){
-      actionHtml = (isAdminSession && !viewingPastYear()) ? `<button class="tiny-btn" data-reopen-contest="${h.number}">Reopen</button>` : '';
+      actionHtml = (isAdminSession && !scoringBlocked()) ? `<button class="tiny-btn" data-reopen-contest="${h.number}">Reopen</button>` : '';
     } else if(contest.winner){
       actionHtml = `<div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end;">
         ${canSet ? `<button class="btn small gold" data-set-contest="${h.number}">Update</button>` : ''}
-        ${isAdminSession ? `<button class="tiny-btn" data-declare-contest="${h.number}">Declare Winner</button>` : ''}
+        ${isAdminSession && !scoringBlocked() ? `<button class="tiny-btn" data-declare-contest="${h.number}">Declare Winner</button>` : ''}
       </div>`;
     } else {
       actionHtml = canSet ? `<button class="btn small gold" data-set-contest="${h.number}">Set</button>` : '';
@@ -2363,11 +2393,11 @@ function renderHoles(idxOverride){
       </div>
       ${calibHint}
       ${calibButtons}
-      ${isAdminSession && !calibratingThisHole ? `<button class="tiny-btn" id="calibrateHoleBtn">${h.calib ? 'Re-calibrate hole' : '📍 Calibrate hole'}</button>` : ''}
-      ${isAdminSession ? (!h.photo ? `<label class="tiny-btn" style="cursor:pointer;">Add a photo for this hole<input type="file" accept="image/*" class="hole-photo-input" data-hole-photo="${h.number}" style="display:none;"></label>` : `<label class="tiny-btn" style="cursor:pointer;">Replace photo<input type="file" accept="image/*" class="hole-photo-input" data-hole-photo="${h.number}" style="display:none;"></label>`) : ''}
+      ${canAdminEditYear() && !calibratingThisHole ? `<button class="tiny-btn" id="calibrateHoleBtn">${h.calib ? 'Re-calibrate hole' : '📍 Calibrate hole'}</button>` : ''}
+      ${canAdminEditYear() ? (!h.photo ? `<label class="tiny-btn" style="cursor:pointer;">Add a photo for this hole<input type="file" accept="image/*" class="hole-photo-input" data-hole-photo="${h.number}" style="display:none;"></label>` : `<label class="tiny-btn" style="cursor:pointer;">Replace photo<input type="file" accept="image/*" class="hole-photo-input" data-hole-photo="${h.number}" style="display:none;"></label>`) : ''}
       ${contestHtml}
       <div class="hole-desc" id="holeDescText" data-editable="desc">${escapeHtml(h.description)}</div>
-      ${isAdminSession ? `<button class="tiny-btn" id="editHoleBtn">Edit hole details</button>` : ''}
+      ${canAdminEditYear() ? `<button class="tiny-btn" id="editHoleBtn">Edit hole details</button>` : ''}
       <div class="hole-dots">${dots}</div>
     </div>
   `;
@@ -2401,7 +2431,11 @@ function renderFeed(){
         <input type="file" accept="image/*" id="botIconInput" style="display:none;">
       </div>
     </div>` : '';
-  const composer = `
+  const feedYearFinal = yearIsFinal(window.storage.currentYear && window.storage.currentYear());
+  const composer = feedYearFinal ? `
+    <div class="card final-feed-note">
+      <div><b>The ${window.storage.currentYear()} tournament is marked final.</b> Likes and replies are still open. New posts open again once the next year is set up.</div>
+    </div>` : `
     <div class="card">
       <div class="section-title" style="font-size:16px;">Share something</div>
       <div class="composer" style="margin-top:8px;">
@@ -2578,7 +2612,7 @@ function renderJoe(){
       <div class="champ-list">${champRows}</div>
       ${isAdminSession ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;align-items:center;">
         <button class="btn secondary small" id="addChampBtn">+ Add champion</button>
-        ${viewingPastYear() ? '' : `<button class="btn gold small" id="declareChampionBtn">🏆 Declare This Year's Champions</button>`}
+        ${scoringBlocked() ? '' : `<button class="btn gold small" id="declareChampionBtn">🏆 Declare This Year's Champions</button>`}
       </div>
       <div style="display:flex;align-items:center;gap:10px;margin-top:10px;">
         ${trophyIconUrl ? `<img src="${trophyIconUrl}" style="width:36px;height:36px;border-radius:8px;object-fit:cover;border:1px solid var(--line);">` : ''}
@@ -4650,8 +4684,15 @@ function viewingUpcomingYear(){
   return viewingPastYear() && TOURNAMENT_YEAR > window.storage.currentYear();
 }
 function canAdminEditYear(){
-  return isAdminSession && (!viewingPastYear() || viewingUpcomingYear());
+  return isAdminSession && !yearIsFinal() && (!viewingPastYear() || viewingUpcomingYear());
 }
+// Marked Final: scores, contests, teams, event details and course are locked
+// for everyone (admin can Reopen). Feed likes and replies still work.
+function yearIsFinal(y){
+  return !!(window.storage && window.storage.isFinal && window.storage.yearMode && window.storage.yearMode()
+    && window.storage.isFinal(y || TOURNAMENT_YEAR));
+}
+function scoringBlocked(){ return viewingPastYear() || yearIsFinal(); }
 function applyTournamentYear(){
   const y = window.storage.activeYear && window.storage.activeYear();
   if(y){
@@ -4671,7 +4712,8 @@ function paintYearChrome(){
     // One navy banner, three states: previous year, upcoming year, or the
     // current year with final scores locked (scorecard + leaderboard only).
     const past = viewingPastYear();
-    const locked = !past && scoresLocked && ['scorecard','leaderboard'].includes(currentTab);
+    const final = !past && yearIsFinal();
+    const locked = !past && (scoresLocked || final) && ['scorecard','leaderboard'].includes(currentTab);
     // the Joe tab shows the year in the event date instead of a banner
     // Joe shows the year in the event date; Feed always shows the current
     // year with past years below, so neither needs the banner
@@ -4688,12 +4730,17 @@ function paintYearChrome(){
       back.style.display = ''; unlock.style.display = 'none';
     } else if(locked){
       main.textContent = `${TOURNAMENT_YEAR} Final Results`;
-      sub.textContent = 'Scores Are Locked';
+      sub.textContent = final ? 'Marked Final · Read-Only' : 'Scores Are Locked';
       back.style.display = 'none';
       unlock.style.display = isAdminSession ? '' : 'none';
+      unlock.innerHTML = `${final ? 'Reopen Year' : 'Unlock Scores'} <span aria-hidden="true">›</span>`;
     }
   }
   document.body.classList.toggle('viewing-past-year', viewingPastYear());
+  const mf = document.getElementById('markFinalBtn');   // label follows the year being viewed
+  if(mf && window.storage.yearMode && window.storage.yearMode()){
+    mf.textContent = yearIsFinal(TOURNAMENT_YEAR) ? `🔓 Reopen ${TOURNAMENT_YEAR}` : `🏁 Mark ${TOURNAMENT_YEAR} Final`;
+  }
 }
 function hasMultipleYears(){
   return window.storage.yearMode && window.storage.yearMode() && window.storage.years().length > 1;
@@ -4716,6 +4763,7 @@ async function switchYear(y){
     expandedLbRows = {};
     scorecardMode = 'score';
     await loadYearData(false);
+    holesConfig = await loadAllHoles();
     startScoreListener();   // re-points the live score listener at this year
     // a player's own scorecard belongs to the current year; send them to the
     // leaderboard when looking back
@@ -4836,6 +4884,32 @@ function locatePost(id){
   return null;
 }
 
+/* ---- Mark Final / Reopen ---- */
+async function markYearFinal(y){
+  if(!isAdminSession) return;
+  if(!confirm(`Mark ${y} final?\n\nLocks for everyone: scores, side-contest winners, teams and groups, event details and the ${y} course. Feed likes and replies stay open; new posts go to the current year.\n\nYou can reopen it any time from here.`)) return;
+  try{
+    await window.storage.setYearStatus(y, 'final');
+    showToast(`${y} marked final`);
+  }catch(e){ alert('Could not mark final: ' + (e && e.message ? e.message : e)); }
+  paintYearsAdmin(); paintYearChrome(); render();
+}
+async function reopenYear(y){
+  if(!isAdminSession) return;
+  if(!confirm(`Reopen ${y}?\n\nScores, contests, teams, event details and the course become editable again. Mark it final again when you're done.`)) return;
+  try{
+    await window.storage.setYearStatus(y, 'open');
+    showToast(`${y} reopened`);
+  }catch(e){ alert('Could not reopen: ' + (e && e.message ? e.message : e)); }
+  paintYearsAdmin(); paintYearChrome(); render();
+}
+document.addEventListener('click', (e)=>{
+  const b = e.target.closest('#markFinalBtn');
+  if(!b || !isAdminSession) return;
+  const y = TOURNAMENT_YEAR;
+  if(yearIsFinal(y)) reopenYear(y); else markYearFinal(y);
+});
+
 /* ---- Admin: years panel ---- */
 function paintYearsAdmin(){
   const st = window.storage;
@@ -4858,6 +4932,11 @@ function paintYearsAdmin(){
     sel.innerHTML = st.years().map(y=>`<option value="${y}" ${y===st.currentYear()?'selected':''}>${y}</option>`).join('');
   }
   document.getElementById('resetTestBtn').style.display = st.testMode ? '' : 'none';
+  const mf = document.getElementById('markFinalBtn');
+  if(mf){
+    mf.style.display = yearMode ? '' : 'none';
+    mf.textContent = yearIsFinal(TOURNAMENT_YEAR) ? `🔓 Reopen ${TOURNAMENT_YEAR}` : `🏁 Mark ${TOURNAMENT_YEAR} Final`;
+  }
   // Start Fresh wipes the current year's scores and feed; once years
   // exist, a new year replaces it, so it is hidden to protect the archive.
   document.getElementById('startFreshSection').style.display = yearMode ? 'none' : '';
@@ -4893,14 +4972,16 @@ function wireYearsAdmin(){
     const y = parseInt(input, 10);
     if(!(y >= 2000 && y <= 2100)){ alert('Enter a 4-digit year, like ' + next + '.'); return; }
     if(years.includes(y)){ alert(`${y} already exists.`); return; }
-    // event details for the new year; course carries over automatically
-    const venue = prompt(`${y} course / location:`, eventInfo.venue || 'Downingtown Country Club'); if(venue === null) return;
+    // course: copy this year's (then tweak) or start a new one
+    const sameCourse = confirm(`Course for ${y}\n\nOK = same course as ${TOURNAMENT_YEAR} (all 18 holes copied; you can change yardage, photos and contests after).\n\nCancel = a new course (18 blank holes to fill in on the Holes tab).`);
+    const venue = prompt(`${y} course / location:`, sameCourse ? (eventInfo.venue || 'Downingtown Country Club') : ''); if(venue === null) return;
     const date  = prompt(`${y} date (e.g. Friday, October 8):`, ''); if(date === null) return;
     const note  = prompt(`${y} note (e.g. dinner plans):`, eventInfo.note || ''); if(note === null) return;
     try{
       await window.storage.createYear(y);
       await window.storage.setForYear(y, 'event-info', JSON.stringify({venue: venue.trim(), date: date.trim(), note: note.trim()}));
       await window.storage.setForYear(y, 'hero-year', `TOURNAMENT · ${y}`);
+      await window.storage.saveCourseForYear(y, sameCourse ? holesConfig : blankCourse());
       const makeCurrent = confirm(`${y} is set up.\n\nMake ${y} the current year now? Everyone will open the app to ${y}.\n\n(Cancel keeps ${window.storage.currentYear()} as current; you can switch later.)`);
       if(makeCurrent) await window.storage.setCurrentYear(y);
       alert(makeCurrent ? `${y} is now the current year. The app will reload.` : `${y} created. The app will reload.`);
@@ -4983,6 +5064,7 @@ function wireYearsAdmin(){
   pingPresence();
   document.addEventListener('click', async (e)=>{
     if(!e.target.closest('#unlockScoresBtn') || !isAdminSession) return;
+    if(yearIsFinal()){ reopenYear(TOURNAMENT_YEAR); return; }
     if(!confirm('Unlock scores so they can be edited again?')) return;
     scoresLocked = false;
     await save('scores-locked', 'false', true);
