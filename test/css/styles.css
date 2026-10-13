@@ -1227,3 +1227,22 @@
 /* three event facts: equal outer columns so the date column sits dead center */
 .hero-facts.hero-facts-3{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);}
 .hero-facts.hero-facts-3 .hero-fact-date{padding:0 12px;}
+
+/* ---- fewer pills: banner action is a text link; the year reads as signage ---- */
+.past-year-back{background:none;border:0;box-shadow:none;padding:8px 2px 8px 10px;
+  color:var(--gold);font:700 14px/1 Inter,system-ui,sans-serif;letter-spacing:.01em;
+  text-decoration:underline;text-decoration-color:rgba(255,209,102,.45);text-underline-offset:4px;}
+.past-year-back span{font-size:18px;text-decoration:none;display:inline-block;margin-left:2px;vertical-align:-1px;}
+.past-year-back:active{opacity:.7;}
+
+.year-switch-chip,
+.board-year-row .year-switch-chip,
+.scorecard-header-year .year-switch-chip{
+  background:none;border:0;box-shadow:none;padding:2px 6px;border-radius:6px;
+  font-family:'Baskerville','Baskerville Old Face',Georgia,'Times New Roman',serif;font-style:normal;font-weight:700;
+  letter-spacing:.06em;transform:none;transition:opacity .1s ease;}
+.year-switch-chip:active{transform:none;border-bottom-width:0;opacity:.6;}
+.board-year-row{margin:0 0 12px;}
+.board-year-row .year-switch-chip{color:var(--fairway);font-size:24px;}
+.scorecard-header-year .year-switch-chip{color:var(--gold);font-size:21px;}
+.year-caret{font-family:Inter,system-ui,sans-serif;font-size:.5em;margin-left:5px;vertical-align:.35em;opacity:.8;}

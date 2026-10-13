@@ -4363,7 +4363,7 @@ function paintYearChrome(){
       const upcoming = TOURNAMENT_YEAR > window.storage.currentYear();
       main.innerHTML = `Viewing ${upcoming ? 'Upcoming' : 'Previous'} Year: <b>${TOURNAMENT_YEAR}</b>`;
       sub.textContent = upcoming ? 'Upcoming Tournament (read-only)' : 'Final Results (read-only)';
-      back.textContent = `Back to ${window.storage.currentYear()}`;
+      back.innerHTML = `Back to ${window.storage.currentYear()} <span aria-hidden="true">›</span>`;
       back.style.display = ''; unlock.style.display = 'none';
     } else if(locked){
       main.textContent = `${TOURNAMENT_YEAR} Final Results`;
@@ -4380,7 +4380,7 @@ function hasMultipleYears(){
 // Small tappable year chip used in headers when more than one year exists
 function yearSwitchChip(){
   if(!hasMultipleYears()) return '';
-  return `<button class="year-switch-chip" data-year-switch type="button" aria-label="Change tournament year">${TOURNAMENT_YEAR} ▾</button>`;
+  return `<button class="year-switch-chip" data-year-switch type="button" aria-label="Change tournament year">${TOURNAMENT_YEAR}<span class="year-caret" aria-hidden="true">▾</span></button>`;
 }
 let yearSwitchInFlight = false;
 async function switchYear(y){
