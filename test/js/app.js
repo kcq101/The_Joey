@@ -2065,7 +2065,7 @@ function renderFeed(){
   const countLabel = shownCount ? `<span class="past-feed-count"> · ${shownCount} post${shownCount===1?'':'s'}</span>` : '';
   const currentHead = `<div class="card past-feed current-feed ${currentFeedOpen ? 'open' : ''}">
     <button class="past-feed-head" data-current-feed type="button">
-      <span>${feedYear} Tournament Feed${countLabel}</span><span class="past-feed-caret">${currentFeedOpen ? '▾' : '▸'}</span>
+      <span>${feedYear} Tournament Feed${countLabel}</span><span class="feed-toggle-circle" aria-hidden="true">${currentFeedOpen ? '−' : '+'}</span>
     </button></div>`;
   const autoToggle = `<div class="feed-auto-toggle" role="group" aria-label="Which posts to show">
     <button type="button" data-auto-posts="show" class="${showAutoPosts ? 'active' : ''}" aria-pressed="${showAutoPosts}">All Posts</button>
@@ -4467,7 +4467,7 @@ function renderPastFeeds(){
       : `<div class="empty">${pf.posts.length ? `Only auto posts from ${y}.` : `No posts from ${y}.`}</div>`;
     return `<div class="card past-feed ${pf.open ? 'open' : ''}">
       <button class="past-feed-head" data-past-feed="${y}" type="button">
-        <span>${y} Tournament Feed<span class="past-feed-count">${count}</span></span><span class="past-feed-caret">${pf.open ? '▾' : '▸'}</span>
+        <span>${y} Tournament Feed<span class="past-feed-count">${count}</span></span><span class="feed-toggle-circle" aria-hidden="true">${pf.open ? '−' : '+'}</span>
       </button>
       ${body}
     </div>`;
