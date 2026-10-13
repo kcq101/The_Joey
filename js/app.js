@@ -2484,10 +2484,23 @@ function renderFeed(){
   </div>`;
   return adminAutoPostPanel + autoToggle + currentHead + (currentFeedOpen ? composer + filterHtml + posts : '') + renderPastFeeds();
 }
+/* 3D heart / reply icons: shared gradients defined once in the page */
+(function addIconGradients(){
+  if(document.getElementById('joeyIconDefs')) return;
+  const d = document.createElement('div');
+  d.innerHTML = `<svg id="joeyIconDefs" width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+    <linearGradient id="g3dRed" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FF6B6B"/><stop offset=".55" stop-color="#E02424"/><stop offset="1" stop-color="#9E1414"/></linearGradient>
+    <linearGradient id="g3dWhite" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#D9D5CA"/></linearGradient>
+  </defs></svg>`;
+  document.body.appendChild(d.firstChild);
+})();
+const HEART_PATH = 'M12 21s-7-4.5-9.5-9A5.5 5.5 0 0 1 12 6a5.5 5.5 0 0 1 9.5 6c-2.5 4.5-9.5 9-9.5 9z';
+const ICON_SHINE = '<ellipse cx="8.2" cy="9.6" rx="2.3" ry="1.4" transform="rotate(-35 8.2 9.6)" fill="#fff" opacity=".75"/>';
+const REPLY_ICON_SVG = `<svg class="icon-3d" viewBox="0 0 24 24" width="22" height="22"><path d="M4 5.5h16a1.5 1.5 0 0 1 1.5 1.5v9a1.5 1.5 0 0 1-1.5 1.5H11l-4.5 3.5V17.5H4A1.5 1.5 0 0 1 2.5 16V7A1.5 1.5 0 0 1 4 5.5z" fill="url(#g3dWhite)" stroke="#6B7570" stroke-width="1.4" stroke-linejoin="round"/><ellipse cx="7.5" cy="8.6" rx="3" ry="1" fill="#fff" opacity=".9"/></svg>`;
 function renderPost(post){
   const heartIcon = post.likedByMe
-    ? `<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" stroke="currentColor" stroke-width="1.8" style="vertical-align:-3px;"><path d="M12 21s-7-4.5-9.5-9A5.5 5.5 0 0 1 12 6a5.5 5.5 0 0 1 9.5 6c-2.5 4.5-9.5 9-9.5 9z"/></svg>`
-    : `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" style="vertical-align:-3px;"><path d="M12 21s-7-4.5-9.5-9A5.5 5.5 0 0 1 12 6a5.5 5.5 0 0 1 9.5 6c-2.5 4.5-9.5 9-9.5 9z"/></svg>`;
+    ? `<svg class="icon-3d" viewBox="0 0 24 24" width="22" height="22"><path d="${HEART_PATH}" fill="url(#g3dRed)" stroke="#8E1212" stroke-width="1.2" stroke-linejoin="round"/>${ICON_SHINE}</svg>`
+    : `<svg class="icon-3d" viewBox="0 0 24 24" width="22" height="22"><path d="${HEART_PATH}" fill="url(#g3dWhite)" stroke="#6B7570" stroke-width="1.4" stroke-linejoin="round"/>${ICON_SHINE}</svg>`;
   const tagsHtml = (post.tags&&post.tags.length) ? `<div class="post-tags">${post.tags.map(t=>`<span class="post-tag">#${escapeHtml(t)}</span>`).join('')}</div>` : '';
   const comments = post.comments || [];
   const expanded = !!expandedComments[post.id];
@@ -2561,7 +2574,7 @@ function renderPost(post){
       ${tagsHtml}
       <div class="post-actions">
         <button class="post-like ${post.likedByMe?'liked':''}" data-like="${post.id}">${heartIcon} ${post.likes||0}</button>
-        <button class="post-comment-toggle" data-toggle-comments="${post.id}">💬 ${comments.length || ''} ${comments.length===1?'Reply':'Replies'}</button>
+        <button class="post-comment-toggle" data-toggle-comments="${post.id}">${REPLY_ICON_SVG} ${comments.length || ''} ${comments.length===1?'Reply':'Replies'}</button>
         ${manageHtml}
       </div>
       ${commentsSection}
