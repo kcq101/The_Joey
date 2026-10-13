@@ -2495,7 +2495,7 @@ function renderFeed(){
   document.body.appendChild(d.firstChild);
 })();
 const HEART_PATH = 'M12 21s-7-4.5-9.5-9A5.5 5.5 0 0 1 12 6a5.5 5.5 0 0 1 9.5 6c-2.5 4.5-9.5 9-9.5 9z';
-const ICON_SHINE = '<ellipse cx="8.2" cy="9.6" rx="2.3" ry="1.4" transform="rotate(-35 8.2 9.6)" fill="#fff" opacity=".75"/>';
+const ICON_SHINE = '<ellipse cx="8.4" cy="9.4" rx="1.9" ry="1.1" transform="rotate(-35 8.4 9.4)" fill="#fff" opacity=".35"/>';
 const REPLY_ICON_SVG = `<svg class="icon-3d" viewBox="0 0 24 24" width="22" height="22"><path d="M4 5.5h16a1.5 1.5 0 0 1 1.5 1.5v9a1.5 1.5 0 0 1-1.5 1.5H11l-4.5 3.5V17.5H4A1.5 1.5 0 0 1 2.5 16V7A1.5 1.5 0 0 1 4 5.5z" fill="url(#g3dWhite)" stroke="#6B7570" stroke-width="1.4" stroke-linejoin="round"/><ellipse cx="7.5" cy="8.6" rx="3" ry="1" fill="#fff" opacity=".9"/></svg>`;
 function renderPost(post){
   const heartIcon = post.likedByMe
