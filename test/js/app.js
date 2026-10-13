@@ -2050,7 +2050,7 @@ function renderFeed(){
       <div class="composer" style="margin-top:8px;">
         <textarea id="feedText" placeholder="How's the round going?"></textarea>
         <div class="composer-row">
-          <button type="button" class="file-btn" id="feedMediaBtn">📷 Add photo/video</button>
+          <button type="button" class="file-btn" id="feedMediaBtn">📷 Add Photo/Video</button>
           <input type="file" accept="image/*" capture="environment" id="feedPhotoCaptureInput" style="display:none;">
           <input type="file" accept="video/*" capture="environment" id="feedVideoCaptureInput" style="display:none;">
           <input type="file" accept="image/*,video/*" id="feedUploadInput" style="display:none;">
@@ -2237,7 +2237,7 @@ function renderJoe(){
       <div class="composer">
         <textarea id="tributeText" placeholder="Share a Story, Picture or just say Hello..."></textarea>
         <div class="composer-row">
-          <button type="button" class="file-btn" id="tributeMediaBtn">📷 Add photo/video</button>
+          <button type="button" class="file-btn" id="tributeMediaBtn">📷 Add Photo/Video</button>
           <input type="file" accept="image/*" capture="environment" id="tributePhotoCaptureInput" style="display:none;">
           <input type="file" accept="video/*" capture="environment" id="tributeVideoCaptureInput" style="display:none;">
           <input type="file" accept="image/*,video/*" id="tributeUploadInput" style="display:none;">
@@ -2827,7 +2827,7 @@ async function restoreMediaDrafts(){
     render();
     showToast('Unsent ' + restored.join(' and ') + ' restored. Tap Post to send it.', 6000);
   } else if(cameraTs && Date.now() - cameraTs < 10*60*1000){
-    showToast("Your phone closed the app while the camera was open, so that photo didn't come through. Tip: take it with your camera app, then use Add photo/video → Upload.", 9000);
+    showToast("Your phone closed the app while the camera was open, so that photo didn't come through. Tip: take it with your camera app, then use Add Photo/Video → Upload.", 9000);
   }
 }
 
