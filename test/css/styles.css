@@ -1258,3 +1258,7 @@
 .board-year-row{margin-top:8px;}
 .scorecard-header-year{margin-top:14px;}
 .year-caret{font-size:.8em;margin-left:6px;vertical-align:.08em;opacity:.85;}
+/* tighter Scorecard header */
+.scorecard-header{padding:9px 16px 8px;}
+.scorecard-header-year{margin-top:8px;}
+.scorecard-header-year .year-switch-chip{padding:0 6px;}
