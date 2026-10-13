@@ -25,11 +25,11 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/styles.css?v=20">
+<link rel="stylesheet" href="css/styles.css?v=21">
 </head>
 <body>
 
-<script src="js/storage.js?v=20"></script>
+<script src="js/storage.js?v=21"></script>
 
 <div id="bootLoading" style="position:fixed;inset:0;z-index:500;background:var(--fairway);display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--paper);gap:14px;">
   <div style="width:34px;height:34px;border:3px solid rgba(255,255,255,0.3);border-top-color:var(--paper);border-radius:50%;animation:bootspin 0.8s linear infinite;"></div>
@@ -133,16 +133,16 @@
   <button class="backup-toggle" id="backupToggle">⚙ Backup &amp; Restore</button>
   <div class="backup-panel" id="identityPanel" style="display:none;">
     <p id="identitySummary"></p>
-    <details class="a2hs-tip">
+    <div class="backup-row">
+      <button class="btn secondary small" id="identityResetBtn" style="flex:1;">Not you? Reset</button>
+      <button class="btn small" id="identityAdminBtn" style="flex:1;">Enable Admin</button>
+    </div>
+    <details class="a2hs-tip identity-a2hs">
       <summary>📲 Add The Joey to your home screen</summary>
       <p><b>iPhone:</b> in Safari, tap Share <span aria-hidden="true">⬆︎</span> → <i>Add to Home Screen</i>.</p>
       <p><b>Android:</b> in Chrome, tap ⋮ → <i>Add to Home screen</i> or <i>Install app</i>.</p>
       <p class="a2hs-note">It opens full-screen like an app. On iPhone you'll pick your name and team once more the first time you open it from the home screen.</p>
     </details>
-    <div class="backup-row">
-      <button class="btn secondary small" id="identityResetBtn" style="flex:1;">Not you? Reset</button>
-      <button class="btn small" id="identityAdminBtn" style="flex:1;">Enable Admin</button>
-    </div>
   </div>
   <div class="backup-panel" id="backupPanel" style="display:none;">
     <p>Download a full backup any time — teams, scores, holes, photos, everything. If a refresh ever loses data, restore from your last backup and you're back where you were.</p>
@@ -201,6 +201,6 @@
   </button>
 </nav>
 
-<script src="js/app.js?v=20"></script>
+<script src="js/app.js?v=21"></script>
 </body>
 </html>

@@ -1220,3 +1220,6 @@
 .scorecard-header-year .year-switch-chip{background:linear-gradient(180deg,rgba(255,226,154,.32) 0%,rgba(255,209,102,.16) 100%);
   border-color:rgba(255,209,102,.7);border-bottom-color:rgba(201,160,58,.95);
   box-shadow:0 3px 6px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.25);}
+/* Account panel: home-screen tip sits below Reset / Enable Admin with room between */
+#identityPanel .backup-row{margin-top:14px;}
+#identityPanel .identity-a2hs{margin-top:18px;padding-top:14px;border-top:1px solid var(--line);}
