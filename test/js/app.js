@@ -1545,7 +1545,7 @@ function renderContestSummary(){
       return pill + declareBtn;
     }
     return canSetWinners
-      ? `<button class="btn small gold" ${actionAttr} style="padding:5px 16px;font-size:12px;">Assign</button>`
+      ? `<button class="btn small gold assign-btn" ${actionAttr}>Assign</button>`
       : '';
   }
 
@@ -4421,7 +4421,7 @@ function openYearSheet(){
     sheet.addEventListener('click', (e)=>{ if(e.target === sheet) sheet.remove(); });
   }
   sheet.innerHTML = `<div class="year-sheet" role="dialog" aria-label="Choose a tournament year">
-    <div class="year-sheet-title">Tournament year</div>
+    <div class="year-sheet-title">Tournament Year</div>
     ${years.map(y=>`<button class="year-sheet-row ${y===TOURNAMENT_YEAR?'active':''}" data-pick-year="${y}" type="button">
       <span>The Joey ${y}</span><span class="year-sheet-tag">${y===cur ? 'Current' : y > cur ? 'Upcoming' : 'Previous'}</span></button>`).join('')}
     <button class="tiny-btn" data-close-year-sheet type="button" style="margin-top:10px;">Close</button>

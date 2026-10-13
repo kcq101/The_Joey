@@ -1196,3 +1196,27 @@
   box-shadow:0 2px 4px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.3);}
 .feed-auto-toggle button[data-auto-posts="show"].active{background:linear-gradient(180deg,#3E9E6E 0%,#2C7F55 100%);color:#fff;}
 .feed-auto-toggle button[data-auto-posts="hide"].active{background:linear-gradient(180deg,#7488A6 0%,#56698A 100%);color:#fff;}
+
+/* ---- raised 3D treatment: Get App, Assign, year chips ---- */
+.get-app-btn{background:linear-gradient(180deg,#FFF1C4 0%,#FFE29A 55%,#F5CF6A 100%);
+  border:1px solid #C9A03A;border-bottom-width:3px;
+  box-shadow:0 3px 6px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.8);}
+.get-app-btn:active{transform:translateY(calc(-50% + 2px));border-bottom-width:1px;box-shadow:0 1px 2px rgba(0,0,0,.3);}
+
+.assign-btn{padding:6px 16px;font-size:12.5px;font-weight:700;color:#1B2A4A;border-radius:9px;
+  border:1px solid #C9A03A;border-bottom-width:3px;
+  background:linear-gradient(180deg,#FFE7A6 0%,#FFD166 55%,#F2BE47 100%);
+  box-shadow:0 2px 5px rgba(27,42,74,.22), inset 0 1px 0 rgba(255,255,255,.75);
+  text-shadow:0 1px 0 rgba(255,255,255,.45);transition:transform .08s ease, box-shadow .08s ease;}
+.assign-btn:active{transform:translateY(2px);border-bottom-width:1px;box-shadow:0 1px 2px rgba(27,42,74,.25);}
+
+.year-switch-chip{border-bottom-width:3px;transition:transform .08s ease, box-shadow .08s ease;}
+.year-switch-chip:active{transform:translateY(2px);border-bottom-width:1px;}
+/* on the cream leaderboard sign: raised light-green chip */
+.board-year-row .year-switch-chip{background:linear-gradient(180deg,#EAF5EE 0%,#D2EBDC 60%,#BFE0CC 100%);
+  border-color:#7FB396;border-bottom-color:#5E9A79;
+  box-shadow:0 3px 6px rgba(0,58,36,.2), inset 0 1px 0 rgba(255,255,255,.9);}
+/* on the dark green scorecard header: raised gold-tinted chip */
+.scorecard-header-year .year-switch-chip{background:linear-gradient(180deg,rgba(255,226,154,.32) 0%,rgba(255,209,102,.16) 100%);
+  border-color:rgba(255,209,102,.7);border-bottom-color:rgba(201,160,58,.95);
+  box-shadow:0 3px 6px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.25);}
