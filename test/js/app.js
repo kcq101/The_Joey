@@ -1296,6 +1296,16 @@ document.addEventListener('click', async (e)=>{
   renderHeroText();
   showToast('Banner text saved');
 });
+// Event date shown as "October 9" with the year on the line below. A leading
+// weekday ("Friday,") and any year typed into the date are taken off, so the
+// year always comes from the tournament year.
+function eventDateHtml(raw){
+  let d = String(raw||'').trim();
+  const typedYear = (d.match(/\b(19|20)\d{2}\b/) || [])[0];
+  d = d.replace(/^(mon|tue|tues|wed|thu|thur|thurs|fri|sat|sun)[a-z]*\.?,?\s+/i, '')
+       .replace(/,?\s*\b(19|20)\d{2}\b/, '').trim();
+  return `${escapeHtml(d).replace(/ /g, '&nbsp;')}<br>${typedYear || TOURNAMENT_YEAR}`;
+}
 function renderEventInfo(){
   renderHeroText();
   const el = document.getElementById('heroEvent'); if(!el) return;
@@ -1306,10 +1316,10 @@ function renderEventInfo(){
   };
   const facts = [
     eventInfo.venue && ['pin', eventInfo.venue],
-    eventInfo.date  && ['cal', /\b\d{4}\b/.test(eventInfo.date) ? eventInfo.date : `${eventInfo.date}, ${TOURNAMENT_YEAR}`],
+    eventInfo.date  && ['cal', eventInfo.date],
     eventInfo.note  && ['dine', eventInfo.note],
   ].filter(Boolean);
-  el.innerHTML = (facts.length ? `<div class="hero-facts">${facts.map(([k,t])=>`<div class="hero-fact"><span class="hero-fact-ico">${ICON[k]}</span><span>${escapeHtml(t).replace(/ (\S+)$/, '&nbsp;$1')}</span></div>`).join('')}</div>` : '')
+  el.innerHTML = (facts.length ? `<div class="hero-facts">${facts.map(([k,t])=>`<div class="hero-fact"><span class="hero-fact-ico">${ICON[k]}</span><span>${k==='cal' ? eventDateHtml(t) : escapeHtml(t).replace(/ (\S+)$/, '&nbsp;$1')}</span></div>`).join('')}</div>` : '')
     + (canAdminEditYear() ? `<button class="tiny-btn" id="editEventInfoBtn" type="button">Edit event details</button>` : '');
   const yr = document.getElementById('heroWordmarkYear'); if(yr) yr.textContent = ' · ' + TOURNAMENT_YEAR;
 }
