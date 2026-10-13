@@ -860,6 +860,29 @@ function checkNameGate(){
    Bebas letters with a gold outline over a soft vignette. Used for
    Welcome back and score moments. Never blocks taps.
 --------------------------------------------------------- */
+// Keep the pop-up off the Quick Score box (and its Clear button): use the
+// open space above or below it, whichever is bigger; shrink to fit if needed.
+function placeCelebration(el){
+  const pos = el.querySelector('.celebrate-pos');
+  const vh = window.innerHeight;
+  const bar = document.querySelector('.tabbar');
+  const top0 = 8, bottom0 = vh - ((bar && bar.offsetHeight) || 0) - 8;
+  let lo = top0, hi = bottom0;
+  const q = document.querySelector('.quick-entry-card');
+  if(q){
+    const r = q.getBoundingClientRect();
+    if(r.bottom > top0 && r.top < bottom0){        // on screen
+      const above = r.top - 6 - top0, below = bottom0 - (r.bottom + 6);
+      if(above >= below){ lo = top0; hi = r.top - 6; } else { lo = r.bottom + 6; hi = bottom0; }
+    }
+  }
+  const h = pos.offsetHeight || 1;
+  const fit = Math.max(0.55, Math.min(1, (hi - lo) / h));
+  const mid = q ? (lo + hi) / 2 : vh * 0.44;
+  pos.style.top = Math.round(mid) + 'px';
+  pos.style.transform = `translate(-50%,-50%) scale(${fit.toFixed(3)})`;
+  el.style.setProperty('--celebrate-y', Math.round(mid) + 'px');
+}
 function showCelebration(opts){
   const o = opts || {};
   let el = document.getElementById('celebrateOverlay');
@@ -870,12 +893,13 @@ function showCelebration(opts){
     document.body.appendChild(el);
   }
   el.className = 'celebrate-overlay' + (o.kind ? ' is-' + o.kind : '');
-  el.innerHTML = `<div class="celebrate-card">
+  el.innerHTML = `<div class="celebrate-pos"><div class="celebrate-card">
       ${o.emoji ? `<div class="celebrate-emoji">${o.emoji}</div>` : ''}
       ${o.kicker ? `<div class="celebrate-kicker">${escapeHtml(o.kicker)}</div>` : ''}
       <div class="celebrate-title">${escapeHtml(o.title || '')}</div>
       ${o.sub ? `<div class="celebrate-sub">${escapeHtml(o.sub)}</div>` : ''}
-    </div>`;
+    </div></div>`;
+  placeCelebration(el);
   void el.offsetWidth;            // restart the animation
   el.classList.add('show');
   clearTimeout(showCelebration._t);
@@ -1907,7 +1931,7 @@ function renderScoreEntry(){
     const confirmVal = isUndoActive ? existingVal : null;
     const confirmLabel = confirmVal ? quickScoreLabel(confirmVal, currentHole.par) : '';
     if(canEditTeam) quickEntryHtml = `
-      <div class="card" style="padding:8px 12px;margin-bottom:10px;background:#CED6C2;">
+      <div class="card quick-entry-card" style="padding:8px 12px;margin-bottom:10px;background:#CED6C2;">
         <div class="section-title" style="font-size:19.125px;font-weight:700;margin-bottom:1px;">Quick Score Entry</div>
         <div class="section-desc" style="margin-bottom:0;color:var(--ink);"><strong>Hole #${currentHole.number}</strong> · Tap your score or input below</div>
         <div class="quick-score-row" style="margin-top:6px;">
