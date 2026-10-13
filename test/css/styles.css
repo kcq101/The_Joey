@@ -1180,3 +1180,11 @@
    two composers' buttons are pixel-identical */
 #tributeMediaBtn{margin-left:1px;}
 #tributePostBtn{margin-right:1px;}
+
+/* compact, right-aligned feed toggle: light green when showing everything,
+   grayish blue when auto posts are hidden */
+.feed-auto-toggle{width:50%;min-width:200px;margin:0 0 12px auto;padding:3px;gap:2px;}
+.feed-auto-toggle button{padding:6px 6px;font-size:11.5px;white-space:nowrap;}
+.feed-auto-toggle button.active{box-shadow:0 1px 3px rgba(0,0,0,.15);}
+.feed-auto-toggle button[data-auto-posts="show"].active{background:#CFE8D9;color:#0B5A3C;}
+.feed-auto-toggle button[data-auto-posts="hide"].active{background:#C9D3E1;color:#2E4470;}

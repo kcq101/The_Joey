@@ -2087,7 +2087,7 @@ function renderFeed(){
       <span>${feedYear} Tournament Feed${countLabel}</span><span class="feed-toggle-circle" aria-hidden="true">${currentFeedOpen ? '−' : '+'}</span>
     </button></div>`;
   const autoToggle = `<div class="feed-auto-toggle" role="group" aria-label="Which posts to show">
-    <button type="button" data-auto-posts="show" class="${showAutoPosts ? 'active' : ''}" aria-pressed="${showAutoPosts}">All Posts</button>
+    <button type="button" data-auto-posts="show" class="${showAutoPosts ? 'active' : ''}" aria-pressed="${showAutoPosts}">See All Posts</button>
     <button type="button" data-auto-posts="hide" class="${showAutoPosts ? '' : 'active'}" aria-pressed="${!showAutoPosts}">Hide Auto Posts</button>
   </div>`;
   return adminAutoPostPanel + autoToggle + currentHead + (currentFeedOpen ? composer + filterHtml + posts : '') + renderPastFeeds();
