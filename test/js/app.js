@@ -4843,11 +4843,9 @@ let currentFeedOpen = true;   // current year's feed section (session only)
 let showAutoPosts = true;
 function withAutoPostFilter(list){ return showAutoPosts ? list : list.filter(p=>!p.system); }
 document.addEventListener('click', (e)=>{
-  const b = e.target.closest('[data-auto-posts]');
-  if(!b) return;
-  const show = b.dataset.autoPosts === 'show';
-  if(show === showAutoPosts) return;
-  showAutoPosts = show;
+  // a tap anywhere on the pill flips it (not just on the other side)
+  if(!e.target.closest('.feed-auto-toggle')) return;
+  showAutoPosts = !showAutoPosts;
   render();
 });
 document.addEventListener('click', (e)=>{
