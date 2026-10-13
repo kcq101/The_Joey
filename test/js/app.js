@@ -2130,14 +2130,14 @@ function openNewTeamSheet(groupId){
 
 function openTeamGroupSheet(tid){
   const t = teams.find(x=>x.id===tid); if(!t) return;
-  openSheet(`Team ${t.label} · Tee time`, groups.map(g=>`
+  openSheet(`Assign Team ${t.label} to a group`, groups.map(g=>`
     <button class="year-sheet-row ${t.groupId===g.id?'active':''}" data-sheet-group="${g.id}" type="button">
-      <span><b>${escapeHtml(g.label)}</b><span class="sheet-row-sub">${g.teeTime ? escapeHtml(g.teeTime)+' · ' : ''}Starts on #${parseInt(g.startHole,10)||1} · ${teamsInGroup(g.id).length} team${teamsInGroup(g.id).length===1?'':'s'}</span></span>
+      <span><b>${escapeHtml(g.label)}</b><span class="sheet-row-sub">${g.teeTime ? 'Tee time '+escapeHtml(g.teeTime)+' · ' : ''}Starts on #${parseInt(g.startHole,10)||1} · ${teamsInGroup(g.id).length} team${teamsInGroup(g.id).length===1?'':'s'}</span></span>
       <span class="year-sheet-tag">${t.groupId===g.id ? 'Current' : ''}</span>
-    </button>`).join('') + `<button class="year-sheet-row ${!t.groupId?'active':''}" data-sheet-group="" type="button"><span><b>No group yet</b></span></button>`, (sh)=>{
+    </button>`).join('') + (groups.length ? '' : '<div class="empty" style="padding:6px 0;">No groups yet. Add one in step 3.</div>') + `<button class="year-sheet-row ${!t.groupId?'active':''}" data-sheet-group="" type="button"><span><b>Not in a group</b></span></button>`, (sh)=>{
     sh.querySelectorAll('[data-sheet-group]').forEach(b=>b.onclick = async ()=>{
       t.groupId = b.dataset.sheetGroup || null;
-      if(await saveRosterState({playersChanged:false, rosterChanged:false})) showToast(`Team ${t.label} moved`);
+      if(await saveRosterState({playersChanged:false, rosterChanged:false})) showToast(t.groupId ? `Team ${t.label} → ${groupLabelFor(t)}` : `Team ${t.label} not in a group`);
       closeSheet(); render();
     });
   });
@@ -2153,46 +2153,50 @@ function teamPlayersHtml(t){
   return escapeHtml((t.players||[]).join(' · '));
 }
 
+function groupLabelFor(t){
+  const g = groups.find(g=>g.id===t.groupId);
+  return g ? g.label : null;
+}
 function renderTeamManager(){
   const un = sortByName(unassignedPlayerIds());
   const wd = sortByName(withdrawnPlayerIds());
-  const teamRow = (t)=>`
-      <div class="team-row">
+  const sortedTeams = teams.slice().sort((a,b)=>a.label.localeCompare(b.label));
+
+  // 1. Players -> 2. Teams -> 3. Groups (tee time + starting hole live on the group)
+  const teamRows = sortedTeams.map(t=>{
+    const gl = groupLabelFor(t);
+    return `<div class="team-row">
         <span class="team-badge">${escapeHtml(t.label)}</span>
         <div class="team-row-info"><div class="team-row-players chip-wrap">${teamPlayersHtml(t)}</div>
           ${teamHasScores(t.id) ? '<div class="team-row-note">Has scores</div>' : ''}</div>
         <div class="team-row-actions">
-          <button class="tiny-btn" data-team-group="${t.id}">Tee time</button>
+          <button class="group-assign-btn ${gl ? '' : 'unset'}" data-team-group="${t.id}" type="button">${gl ? escapeHtml(gl) : 'Assign group'} <span aria-hidden="true">▾</span></button>
           <button class="tiny-btn" data-remove-team="${t.id}">Remove</button>
         </div>
       </div>`;
+  }).join('');
+
   const groupBlocks = groups.map(g=>{
     const gt = teamsInGroup(g.id).slice().sort((a,b)=>a.label.localeCompare(b.label));
     return `<div class="group-block">
       <div class="group-block-head">
         <div>
           <div class="group-block-title">${escapeHtml(g.label)}</div>
-          <div class="group-block-time">${g.teeTime ? escapeHtml(g.teeTime) + ' · ' : ''}Starts on #${parseInt(g.startHole,10)||1}</div>
+          <div class="group-block-time">${g.teeTime ? 'Tee time ' + escapeHtml(g.teeTime) + ' · ' : 'No tee time · '}Starts on #${parseInt(g.startHole,10)||1}</div>
         </div>
         <div style="display:flex;gap:10px;">
           <button class="tiny-btn" data-edit-group="${g.id}">Edit</button>
           <button class="tiny-btn" data-remove-group="${g.id}">Remove</button>
         </div>
       </div>
-      ${gt.map(teamRow).join('') || `<div class="empty" style="padding:8px 0;">No teams in this group yet.</div>`}
-      <button class="btn secondary small" style="margin-top:10px;" data-add-team-to="${g.id}">+ New team</button>
+      <div class="group-team-list">${gt.length ? gt.map(t=>`<span class="group-team-pill"><span class="team-badge">${escapeHtml(t.label)}</span>${escapeHtml(formatTeamName(t))}</span>`).join('') : '<span class="team-empty-note">No teams yet. Use a team\'s group button above.</span>'}</div>
     </div>`;
   }).join('');
-  const loose = unassignedTeams().slice().sort((a,b)=>a.label.localeCompare(b.label));
-  const looseHtml = loose.length ? `
-    <div class="group-block" style="border-style:dashed;">
-      <div class="group-block-head"><div class="group-block-title">Teams without a tee time</div></div>
-      ${loose.map(teamRow).join('')}
-    </div>` : '';
+  const ungrouped = unassignedTeams().length;
 
   return `
     <div class="card roster-card">
-      <div class="section-title" style="font-size:16px;">${TOURNAMENT_YEAR} Players</div>
+      <div class="builder-step"><span>1</span>${TOURNAMENT_YEAR} Players</div>
       <div class="section-desc">Tap a player to put them on a team, move them, or withdraw them.</div>
       <div class="roster-subhead">Unassigned <span>${un.length}</span></div>
       <div class="chip-wrap">${un.length ? un.map(pid=>playerChip(pid, 'unassigned')).join('') : `<span class="team-empty-note">${roster.length ? 'Everyone is on a team.' : 'No players on the roster yet.'}</span>`}</div>
@@ -2201,12 +2205,16 @@ function renderTeamManager(){
         <div class="chip-wrap">${wd.map(pid=>playerChip(pid, 'withdrawn')).join('')}</div>` : ''}
     </div>
     <div class="card">
-      <div class="section-title" style="font-size:16px;">Groups &amp; Tee Times</div>
-      <div class="section-desc">Each group plays together at one tee time and can hold multiple teams.</div>
-      ${groupBlocks}
-      ${looseHtml}
+      <div class="builder-step"><span>2</span>Teams</div>
+      <div class="section-desc">Up to ${MAX_TEAM_SIZE} players per team. Use each team's group button to place it in a group.${ungrouped ? ` <b>${ungrouped} team${ungrouped===1?'':'s'} not in a group yet.</b>` : ''}</div>
+      ${teamRows || '<div class="empty" style="padding:8px 0;">No teams yet.</div>'}
+      <button class="btn secondary block" id="addUnassignedTeamBtn" style="margin-top:10px;">+ New team</button>
+    </div>
+    <div class="card">
+      <div class="builder-step"><span>3</span>Groups</div>
+      <div class="section-desc">Each group has its own tee time and starting hole, and plays together.</div>
+      ${groupBlocks || '<div class="empty" style="padding:8px 0;">No groups yet.</div>'}
       <button class="btn block" id="addGroupBtn" style="margin-top:4px;">+ Add group</button>
-      <button class="btn secondary block" id="addUnassignedTeamBtn" style="margin-top:8px;">+ New team (no tee time yet)</button>
     </div>
   `;
 }
@@ -3387,8 +3395,8 @@ function attachHandlers(){
   document.getElementById('addGroupBtn') && (document.getElementById('addGroupBtn').onclick = async ()=>{
     const label = prompt("Group name:", `Group ${groups.length+1}`);
     if(!label || !label.trim()) return;
-    const teeTime = prompt("Tee time (optional):", '') || '';
-    const startHole = parseInt(prompt("Starting hole:", '1'),10) || 1;
+    const teeTime = prompt("Tee time for this group (optional, e.g. 1:00 PM):", '') || '';
+    const startHole = parseInt(prompt("Starting hole for this group:", '1'),10) || 1;
     groups.push({id: uid(), label: label.trim(), teeTime: teeTime.trim(), startHole});
     await save('groups', JSON.stringify(groups), true);
     render();
@@ -3413,7 +3421,7 @@ function attachHandlers(){
   });
   document.querySelectorAll('[data-remove-group]').forEach(el=>{
     el.onclick = async ()=>{
-      if(!confirm('Remove this group? Its teams will become unassigned.')) return;
+      if(!confirm('Remove this group? Its teams stay, just without a group.')) return;
       const gid = el.dataset.removeGroup;
       groups = groups.filter(g=>g.id!==gid);
       teams.forEach(t=>{ if(t.groupId===gid) t.groupId = null; });
