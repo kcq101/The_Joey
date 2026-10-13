@@ -1162,3 +1162,21 @@
 }
 .file-btn:active{transform:translateY(2px);border-bottom-width:1px;
   box-shadow:0 1px 2px rgba(27,42,74,.25), inset 0 1px 2px rgba(0,0,0,.12);}
+
+/* Post: same raised 3D profile as Add Photo/Video, in the fairway green.
+   Feed and Tribute Wall share these exact styles. */
+.composer-row{align-items:stretch;}
+.composer-row .file-btn, .composer-row .post-btn{min-height:46px;}
+.post-btn{min-width:104px;font-weight:700;font-size:15px;
+  border:1px solid #004A33;border-bottom-width:3px;border-radius:10px;
+  background:linear-gradient(180deg,#1E8A62 0%,#006747 55%,#005A3E 100%);color:#fff;
+  box-shadow:0 3px 6px rgba(0,58,36,.28), inset 0 1px 0 rgba(255,255,255,.25);
+  text-shadow:0 1px 0 rgba(0,0,0,.25);transition:transform .08s ease, box-shadow .08s ease;}
+.post-btn span{font-size:20px;line-height:0;margin-left:2px;vertical-align:-1px;}
+.post-btn:active{transform:translateY(2px);border-bottom-width:1px;
+  box-shadow:0 1px 2px rgba(0,58,36,.3), inset 0 1px 2px rgba(0,0,0,.2);}
+.post-btn:disabled{opacity:.7;transform:none;}
+/* the Joe sheet is 2px wider inside than the Feed card; even them up so the
+   two composers' buttons are pixel-identical */
+#tributeMediaBtn{margin-left:1px;}
+#tributePostBtn{margin-right:1px;}

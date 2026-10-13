@@ -2054,7 +2054,7 @@ function renderFeed(){
           <input type="file" accept="image/*" capture="environment" id="feedPhotoCaptureInput" style="display:none;">
           <input type="file" accept="video/*" capture="environment" id="feedVideoCaptureInput" style="display:none;">
           <input type="file" accept="image/*,video/*" id="feedUploadInput" style="display:none;">
-          <button class="btn" id="feedPostBtn" ${feedPosting?'disabled':''}>${feedPosting?'Posting…':'Post'}</button>
+          <button class="btn post-btn" id="feedPostBtn" ${feedPosting?'disabled':''}>${feedPosting?'Posting…':'Post <span aria-hidden="true">›</span>'}</button>
         </div>
         <div id="feedImgPreviewWrap"></div>
       </div>
@@ -2241,7 +2241,7 @@ function renderJoe(){
           <input type="file" accept="image/*" capture="environment" id="tributePhotoCaptureInput" style="display:none;">
           <input type="file" accept="video/*" capture="environment" id="tributeVideoCaptureInput" style="display:none;">
           <input type="file" accept="image/*,video/*" id="tributeUploadInput" style="display:none;">
-          <button class="btn joe-post-btn" id="tributePostBtn" ${tributePosting?'disabled':''}>${tributePosting?'Posting…':'Post <span aria-hidden="true">›</span>'}</button>
+          <button class="btn post-btn" id="tributePostBtn" ${tributePosting?'disabled':''}>${tributePosting?'Posting…':'Post <span aria-hidden="true">›</span>'}</button>
         </div>
         <div id="tributeImgPreviewWrap"></div>
       </div>
@@ -3486,7 +3486,7 @@ function attachHandlers(){
     if(!text && !pendingFeedFile){ showToast('Write something or add a photo/video'); return; }
     if(!myName){ document.getElementById('nameGate').style.display='flex'; return; }
     feedPosting = true;
-    const setBtn = (busy)=>{ const b = document.getElementById('feedPostBtn'); if(b){ b.disabled = busy; if(busy) b.textContent = 'Posting…'; else b.innerHTML = 'Post'; } };
+    const setBtn = (busy)=>{ const b = document.getElementById('feedPostBtn'); if(b){ b.disabled = busy; if(busy) b.textContent = 'Posting…'; else b.innerHTML = 'Post <span aria-hidden="true">›</span>'; } };
     setBtn(true);
     try{
     let imgUrl = null, videoUrl = null;
