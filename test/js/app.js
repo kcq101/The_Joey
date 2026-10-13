@@ -1328,7 +1328,7 @@ function renderEventInfo(){
     eventInfo.date  && ['cal', eventInfo.date],
     eventInfo.note  && ['dine', eventInfo.note],
   ].filter(Boolean);
-  el.innerHTML = (facts.length ? `<div class="hero-facts">${facts.map(([k,t])=>`<div class="hero-fact${k==='cal' ? ' hero-fact-date' : ''}"><span class="hero-fact-ico">${ICON[k]}</span><span>${k==='cal' ? eventDateHtml(t) : escapeHtml(t).replace(/ (\S+)$/, '&nbsp;$1')}</span></div>`).join('')}</div>` : '')
+  el.innerHTML = (facts.length ? `<div class="hero-facts${facts.length===3 ? ' hero-facts-3' : ''}">${facts.map(([k,t])=>`<div class="hero-fact${k==='cal' ? ' hero-fact-date' : ''}"><span class="hero-fact-ico">${ICON[k]}</span><span>${k==='cal' ? eventDateHtml(t) : escapeHtml(t).replace(/ (\S+)$/, '&nbsp;$1')}</span></div>`).join('')}</div>` : '')
     + (canAdminEditYear() ? `<button class="tiny-btn" id="editEventInfoBtn" type="button">Edit event details</button>` : '');
   const yr = document.getElementById('heroWordmarkYear'); if(yr) yr.textContent = ' · ' + TOURNAMENT_YEAR;
 }

@@ -1223,3 +1223,7 @@
 /* Account panel: home-screen tip sits below Reset / Enable Admin with room between */
 #identityPanel .backup-row{margin-top:14px;}
 #identityPanel .identity-a2hs{margin-top:18px;padding-top:14px;border-top:1px solid var(--line);}
+
+/* three event facts: equal outer columns so the date column sits dead center */
+.hero-facts.hero-facts-3{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);}
+.hero-facts.hero-facts-3 .hero-fact-date{padding:0 12px;}
