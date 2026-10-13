@@ -1246,3 +1246,9 @@
 .board-year-row .year-switch-chip{color:var(--fairway);font-size:24px;}
 .scorecard-header-year .year-switch-chip{color:var(--gold);font-size:21px;}
 .year-caret{font-family:Inter,system-ui,sans-serif;font-size:.5em;margin-left:5px;vertical-align:.35em;opacity:.8;}
+/* year text: back to the app's sans-serif; black on the leaderboard sign */
+.year-switch-chip,
+.board-year-row .year-switch-chip,
+.scorecard-header-year .year-switch-chip{font-family:Inter,system-ui,sans-serif;font-weight:700;letter-spacing:.02em;}
+.board-year-row .year-switch-chip{color:var(--ink);font-size:22px;}
+.scorecard-header-year .year-switch-chip{font-size:19px;}
