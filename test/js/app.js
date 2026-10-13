@@ -1939,6 +1939,7 @@ async function saveRosterState({playersChanged=true, rosterChanged=true, teamsCh
 /* First time the admin opens Teams & Groups for a year: build the shared
    players list from every year's teams, and this year's roster from its
    own teams, so nothing has to be retyped. */
+const MAX_TEAM_SIZE = 4;   // pairs normally, threesomes for odd numbers, never more than 4
 let rosterSetupDone = {};
 async function ensureRosterSetup(){
   const y = TOURNAMENT_YEAR;
@@ -1996,6 +1997,7 @@ async function movePlayer(pid, target){
   const from = teamOfPlayer(pid);
   const to = (target !== 'unassigned' && target !== 'withdrawn') ? teams.find(t=>t.id===target) : null;
   if(from && to && from.id === to.id) return;
+  if(to && (to.playerIds||[]).length >= MAX_TEAM_SIZE){ showToast(`Team ${to.label} is full (${MAX_TEAM_SIZE} players max)`); return; }
   if(!scoresWarning([from, to])) return;
   if(from) from.playerIds = from.playerIds.filter(x=>x!==pid);
   if(to) to.playerIds = (to.playerIds||[]).concat(pid);
@@ -2012,9 +2014,10 @@ async function movePlayer(pid, target){
 
 function teamOptionRow(t, currentTid){
   const names = (t.playerIds||[]).map(playerName).filter(Boolean);
-  return `<button class="year-sheet-row ${t.id===currentTid?'active':''}" data-sheet-team="${t.id}" type="button">
+  const full = names.length >= MAX_TEAM_SIZE && t.id !== currentTid;
+  return `<button class="year-sheet-row ${t.id===currentTid?'active':''} ${full?'is-full':''}" data-sheet-team="${t.id}" type="button" ${full?'disabled':''}>
     <span><b>Team ${escapeHtml(t.label)}</b>${names.length ? `<span class="sheet-row-sub">${escapeHtml(names.join(' · '))}</span>` : '<span class="sheet-row-sub">Empty</span>'}</span>
-    <span class="year-sheet-tag">${t.id===currentTid ? 'Current' : (names.length>=4 ? 'Full?' : '')}</span>
+    <span class="year-sheet-tag">${t.id===currentTid ? 'Current' : (full ? 'Full' : '')}</span>
   </button>`;
 }
 
@@ -2105,13 +2108,19 @@ function openNewTeamSheet(groupId){
   const un = sortByName(unassignedPlayerIds());
   const label = nextTeamLabel();
   openSheet(`New Team ${label}`, un.length ? `
-    <div class="sheet-section-label">Pick players from Unassigned</div>
+    <div class="sheet-section-label">Pick players from Unassigned · up to ${MAX_TEAM_SIZE}</div>
     <div class="sheet-checklist">${un.map(pid=>`<label class="sheet-check"><input type="checkbox" value="${pid}"><span>${escapeHtml(playerName(pid))}</span></label>`).join('')}</div>
     <button class="btn block" data-sheet-create type="button" style="margin-top:12px;">Create Team ${escapeHtml(label)}</button>`
     : `<div class="empty" style="padding:8px 0;">Everyone on the roster is already on a team. Add players first, or create an empty team.</div>
        <button class="btn block secondary" data-sheet-create type="button" style="margin-top:8px;">Create empty Team ${escapeHtml(label)}</button>`, (sh)=>{
+    const boxes = Array.from(sh.querySelectorAll('.sheet-check input'));
+    const capPicks = ()=>{
+      const n = boxes.filter(b=>b.checked).length;
+      boxes.forEach(b=>{ b.disabled = !b.checked && n >= MAX_TEAM_SIZE; b.closest('.sheet-check').classList.toggle('is-disabled', b.disabled); });
+    };
+    boxes.forEach(b=>b.addEventListener('change', capPicks));
     sh.querySelector('[data-sheet-create]').onclick = async ()=>{
-      const picked = Array.from(sh.querySelectorAll('.sheet-check input:checked')).map(i=>i.value);
+      const picked = Array.from(sh.querySelectorAll('.sheet-check input:checked')).map(i=>i.value).slice(0, MAX_TEAM_SIZE);
       teams.push({id: uid(), label, groupId: groupId || null, players: [], playerIds: picked});
       if(await saveRosterState({playersChanged:false, rosterChanged:false})) showToast(`Team ${label} created`);
       closeSheet(); render();
