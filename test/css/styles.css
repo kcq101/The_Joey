@@ -1252,3 +1252,5 @@
 .scorecard-header-year .year-switch-chip{font-family:Inter,system-ui,sans-serif;font-weight:700;letter-spacing:.02em;}
 .board-year-row .year-switch-chip{color:var(--ink);font-size:22px;}
 .scorecard-header-year .year-switch-chip{font-size:19px;}
+/* same year size on the leaderboard sign as on the Scorecard header */
+.board-year-row .year-switch-chip{font-size:19px;}
