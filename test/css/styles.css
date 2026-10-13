@@ -1254,3 +1254,7 @@
 .scorecard-header-year .year-switch-chip{font-size:19px;}
 /* same year size on the leaderboard sign as on the Scorecard header */
 .board-year-row .year-switch-chip{font-size:19px;}
+/* a little air under "The Joey"; bigger dropdown triangle on both tabs */
+.board-year-row{margin-top:8px;}
+.scorecard-header-year{margin-top:14px;}
+.year-caret{font-size:.8em;margin-left:6px;vertical-align:.08em;opacity:.85;}
