@@ -700,7 +700,7 @@
     display:flex;align-items:center;gap:8px;width:100%;margin-top:10px;padding:10px 12px;
     background:#E3F5E9;border:1px solid rgba(0,103,71,.25);border-radius:10px;
     color:var(--fairway);font-size:13px;font-weight:700;text-align:left;cursor:pointer;
-    animation:quickConfirmIntensify 4s ease-in forwards;
+    animation:quickConfirmIntensify 2.4s ease-in forwards;
   }
   @keyframes quickConfirmIntensify{
     0%{background:#E3F5E9;border-color:rgba(0,103,71,.25);}

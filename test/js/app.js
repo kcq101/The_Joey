@@ -2414,7 +2414,8 @@ let expandedLbRows = {};   // { teamId: true } -- which leaderboard rows show th
 let editingPostId = null;   // post currently being edited (text only), or null
 let editingCommentId = null; // comment currently being edited, or null
 let pendingQuickEntry = null; // {hole, val} -- Quick Score Entry selection not yet saved
-let quickUndoState = null;    // {hole, teamId, previousVal, timeoutId} -- 4s Undo grace period after a quick-tap save
+const QUICK_CONFIRM_MS = 2400;   // Quick Score: green fill + Undo window before it locks in (was 4000)
+let quickUndoState = null;    // {hole, teamId, previousVal, timeoutId} -- 2.4s Undo grace period after a quick-tap save
 
 function renderFeed(){
   const adminAutoPostPanel = isAdminSession ? `
@@ -3383,13 +3384,13 @@ function attachHandlers(){
         if(val===8) fireSnowmanAnimation();
       }
 
-      // The auto feed post waits out the 4s undo grace period so an accidental
+      // The auto feed post waits out the 2.4s undo grace period so an accidental
       // tap that gets corrected never generates a post.
       const timeoutId = setTimeout(async ()=>{
         quickUndoState = null;
         await maybePostScoreEvent(tid, holeNum, val, standingsBefore);
         render(); // the grace period is over -- advance to the next hole
-      }, 4000);
+      }, QUICK_CONFIRM_MS);
       quickUndoState = {hole: holeNum, teamId: tid, previousVal, standingsBefore, timeoutId};
       pendingQuickEntry = {hole: holeNum, val};
       render();
