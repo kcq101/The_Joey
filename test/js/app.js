@@ -1296,15 +1296,24 @@ document.addEventListener('click', async (e)=>{
   renderHeroText();
   showToast('Banner text saved');
 });
-// Event date shown as "October 9" with the year on the line below. A leading
-// weekday ("Friday,") and any year typed into the date are taken off, so the
-// year always comes from the tournament year.
+// Event date shown on three lines: weekday, "October 9", year. The weekday
+// is spelled out (typed "Fri" becomes "Friday"; if none was typed it's worked
+// out from the date). The year always comes from the tournament year unless
+// one was typed into the date.
+const WEEKDAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 function eventDateHtml(raw){
   let d = String(raw||'').trim();
   const typedYear = (d.match(/\b(19|20)\d{2}\b/) || [])[0];
-  d = d.replace(/^(mon|tue|tues|wed|thu|thur|thurs|fri|sat|sun)[a-z]*\.?,?\s+/i, '')
+  const year = typedYear || TOURNAMENT_YEAR;
+  const wd = d.match(/^(mon|tue|wed|thu|fri|sat|sun)[a-z]*\.?,?\s+/i);
+  d = d.replace(/^(mon|tue|wed|thu|fri|sat|sun)[a-z]*\.?,?\s+/i, '')
        .replace(/,?\s*\b(19|20)\d{2}\b/, '').trim();
-  return `${escapeHtml(d).replace(/ /g, '&nbsp;')}<br>${typedYear || TOURNAMENT_YEAR}`;
+  let weekday = wd ? WEEKDAYS.find(w=>w.slice(0,3).toLowerCase() === wd[1].toLowerCase()) : null;
+  if(!weekday){
+    const t = new Date(`${d}, ${year}`);
+    if(!isNaN(t)) weekday = WEEKDAYS[t.getDay()];
+  }
+  return (weekday ? `${weekday}<br>` : '') + `${escapeHtml(d)}<br>${year}`;
 }
 function renderEventInfo(){
   renderHeroText();
@@ -1319,7 +1328,7 @@ function renderEventInfo(){
     eventInfo.date  && ['cal', eventInfo.date],
     eventInfo.note  && ['dine', eventInfo.note],
   ].filter(Boolean);
-  el.innerHTML = (facts.length ? `<div class="hero-facts">${facts.map(([k,t])=>`<div class="hero-fact"><span class="hero-fact-ico">${ICON[k]}</span><span>${k==='cal' ? eventDateHtml(t) : escapeHtml(t).replace(/ (\S+)$/, '&nbsp;$1')}</span></div>`).join('')}</div>` : '')
+  el.innerHTML = (facts.length ? `<div class="hero-facts">${facts.map(([k,t])=>`<div class="hero-fact${k==='cal' ? ' hero-fact-date' : ''}"><span class="hero-fact-ico">${ICON[k]}</span><span>${k==='cal' ? eventDateHtml(t) : escapeHtml(t).replace(/ (\S+)$/, '&nbsp;$1')}</span></div>`).join('')}</div>` : '')
     + (canAdminEditYear() ? `<button class="tiny-btn" id="editEventInfoBtn" type="button">Edit event details</button>` : '');
   const yr = document.getElementById('heroWordmarkYear'); if(yr) yr.textContent = ' · ' + TOURNAMENT_YEAR;
 }

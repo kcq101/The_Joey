@@ -1142,3 +1142,9 @@
 /* circled + / − expand-collapse control on feed year headers */
 .feed-toggle-circle{flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;
   border:2px solid var(--gold);border-radius:50%;color:var(--gold);font:600 20px/1 Inter,system-ui,sans-serif;padding-bottom:2px;box-sizing:border-box;}
+
+/* event facts: icons and text aligned to the top; the date column sizes to
+   its own lines so it never runs into the dinner note */
+.hero-fact{align-items:flex-start;}
+.hero-fact-ico{margin-top:1px;}
+.hero-fact-date{flex:0 0 auto;white-space:nowrap;}
