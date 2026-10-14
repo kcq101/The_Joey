@@ -3034,7 +3034,7 @@ function showMediaSourceMenu(anchorBtn, photoInput, videoInput, uploadInput){
   menu.innerHTML = `<div class="mso-head">Add to your post</div>`
     + row('mediaSourceTakePhoto', 'is-photo', ico.photo, 'Take Photo', 'Use your camera')
     + row('mediaSourceRecordVideo', 'is-video', ico.video, 'Record Video', '30 second limit')
-    + row('mediaSourceUpload', 'is-upload', ico.upload, 'Upload', 'From your photo library');
+    + row('mediaSourceUpload', 'is-upload', ico.upload, 'Upload', 'From your library');
   document.body.appendChild(menu);
 
   const mw = menu.offsetWidth, mh = menu.offsetHeight;
