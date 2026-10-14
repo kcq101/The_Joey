@@ -1392,11 +1392,7 @@
 /* everyday bottom messages: a little more polish */
 .toast{font-family:Inter,sans-serif;font-weight:700;letter-spacing:.01em;border:1px solid rgba(244,210,122,.55);
   box-shadow:0 6px 16px rgba(0,0,0,.25);padding:10px 18px;}
-/* Welcome back: dim the whole screen gray (darkest behind the words) for contrast */
-.celebrate-overlay.is-welcome{
-  background:
-    radial-gradient(ellipse 85% 26% at 50% var(--celebrate-y,44%),rgba(0,0,0,.62),rgba(0,0,0,.3) 55%,rgba(0,0,0,0) 100%),
-    rgba(28,30,29,.58);
-}
+/* Welcome back: soft gray-green dimmer, a little deeper behind the words (option 1) */
+.celebrate-overlay.is-welcome{background:rgba(26,48,36,.50);}
 .is-welcome .celebrate-pos{padding:46px 70px;
-  background:radial-gradient(closest-side,rgba(0,0,0,.68),rgba(0,0,0,.45) 55%,rgba(0,0,0,0) 100%);}
+  background:radial-gradient(closest-side,rgba(14,42,28,.50),rgba(14,42,28,.28) 55%,rgba(0,0,0,0) 100%);}
