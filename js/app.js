@@ -3020,10 +3020,21 @@ function showMediaSourceMenu(anchorBtn, photoInput, videoInput, uploadInput){
   menu.id = 'mediaSourceMenu';
   menu.className = 'score-confirm-bubble media-source-menu';
   menu.style.position = 'fixed';   // coords below are viewport-based
-  menu.innerHTML = `
-    <button class="media-source-option" id="mediaSourceTakePhoto">📸 Take Photo</button>
-    <button class="media-source-option" id="mediaSourceRecordVideo">🎥 Record Video <span class="media-limit-note">(aim for 30 sec)</span></button>
-    <button class="media-source-option" id="mediaSourceUpload">🖼 Upload</button>`;
+  menu.style.width = Math.min(Math.max(rect.width, 260), window.innerWidth - 16) + 'px';
+  const ico = {
+    photo: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-2.5h6L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.6"/></svg>',
+    video: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6.5" width="13" height="11" rx="2"/><path d="M15.5 10.5l6-3.5v10l-6-3.5z"/></svg>',
+    upload: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.8"/><path d="M21 16l-5-5-8 9"/></svg>'
+  };
+  const row = (id, cls, icon, title, sub)=>`<button class="media-source-option" id="${id}">
+      <span class="mso-icon ${cls}">${icon}</span>
+      <span class="mso-text"><span class="mso-title">${title}</span><span class="mso-sub">${sub}</span></span>
+      <span class="mso-chev" aria-hidden="true">›</span>
+    </button>`;
+  menu.innerHTML = `<div class="mso-head">Add to your post</div>`
+    + row('mediaSourceTakePhoto', 'is-photo', ico.photo, 'Take Photo', 'Use your camera')
+    + row('mediaSourceRecordVideo', 'is-video', ico.video, 'Record Video', '30 second limit')
+    + row('mediaSourceUpload', 'is-upload', ico.upload, 'Upload', 'From your library');
   document.body.appendChild(menu);
 
   const mw = menu.offsetWidth, mh = menu.offsetHeight;
