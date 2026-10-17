@@ -1089,6 +1089,27 @@ function playOrder(team){
   const i = holesConfig.findIndex(h=>h.number===teamStartHole(team));
   return i > 0 ? holesConfig.slice(i).concat(holesConfig.slice(0,i)) : holesConfig.slice();
 }
+/* Side contest strokes: every contest winner (hole contests and extras like
+   The Golden Boy) takes 1 stroke off their team's total, as soon as a name is
+   assigned. Winners are typed names, so match on the full name first, then on
+   last name when only one player has it. Golf scores themselves never change. */
+function contestWinnerTeamId(name){
+  const n = normName(name || '');
+  if(!n) return null;
+  let hits = teams.filter(t=>(t.players||[]).some(p=>normName(p)===n));
+  if(hits.length !== 1){
+    const last = normName(String(name).trim().split(/\s+/).pop());
+    const byLast = teams.filter(t=>(t.players||[]).some(p=>normName(String(p).trim().split(/\s+/).pop())===last));
+    if(!hits.length) hits = byLast;
+  }
+  return hits.length === 1 ? hits[0].id : null;
+}
+function contestBonusFor(teamId){
+  let n = 0;
+  Object.values(contests || {}).forEach(c=>{ if(c && c.winner && contestWinnerTeamId(c.winner)===teamId) n++; });
+  (extraContests || []).forEach(c=>{ if(c && c.winner && contestWinnerTeamId(c.winner)===teamId) n++; });
+  return n;
+}
 function teamTotals(teamId){
   const s = scores[teamId] || {};
   let strokes = 0, par = 0, thru = 0;
@@ -1096,7 +1117,13 @@ function teamTotals(teamId){
     const val = s[h.number];
     if(val){ strokes += val; par += h.par; thru++; }
   });
-  return {strokes, par, thru, diff: strokes-par};
+  const bonus = contestBonusFor(teamId);
+  const golfDiff = strokes - par;
+  return {strokes, par, thru, golfDiff, bonus, diff: golfDiff - bonus};
+}
+// small blue "-2" beside a total showing the contest strokes included in it
+function bonusNote(t){
+  return (t && t.bonus && t.thru) ? `<sup class="bonus-sup" title="Includes ${t.bonus} side contest stroke${t.bonus>1?'s':''}">−${t.bonus}</sup>` : '';
 }
 function nextTeamLabel(){
   const used = new Set(teams.map(t=>t.label));
@@ -1505,7 +1532,7 @@ function renderLeaderboard(){
           return `<div class="lb-teetime"><div class="lb-teetime-time">${escapeHtml(g.teeTime)}</div><div class="lb-teetime-sub">Tee · #${sh}</div></div>`;
         }
         return `<div class="lb-thru"><div class="score-box">${thruLabel}</div></div>
-      <div class="lb-score"><div class="score-box ${cls}">${fmtDiff(r.tot.diff, r.tot.thru)}</div></div>`;
+      <div class="lb-score"><div class="score-box ${cls}">${fmtDiff(r.tot.diff, r.tot.thru)}${bonusNote(r.tot)}</div></div>`;
       })()}
       <span class="lb-expand-toggle" aria-hidden="true">${expanded ? '−' : '+'}</span>
     </div>`;
@@ -1857,7 +1884,7 @@ function renderScoreEntry(){
       </div>
       <div class="row-between" style="margin-top:16px;border-top:1px solid var(--line);padding-top:12px;">
         <span style="font-size:13px;color:var(--ink-soft);">Thru ${t.thru} · ${t.strokes || 0} strokes</span>
-        <span class="mono" style="font-weight:700;font-size:16px;color:${t.diff<0?'var(--flag)':'var(--ink)'};">${fmtDiff(t.diff,t.thru)}</span>
+        <span class="mono" style="font-weight:700;font-size:16px;color:${t.diff<0?'var(--flag)':'var(--ink)'};position:relative;">${fmtDiff(t.diff,t.thru)}${bonusNote(t)}</span>
       </div>
     `;
   } else {
@@ -1877,7 +1904,7 @@ function renderScoreEntry(){
           ${playerNameLines(team.players)}
         </div>
         <div class="your-team-stats">
-          <div class="your-team-score" style="color:${t.diff<0?'var(--gold-light)':'#fff'};">${fmtDiff(t.diff,t.thru)}</div>
+          <div class="your-team-score" style="color:${t.diff<0?'var(--gold-light)':'#fff'};position:relative;">${fmtDiff(t.diff,t.thru)}${bonusNote(t)}</div>
           <div class="your-team-thru">Thru ${t.thru}</div>
         </div>
       </div>`;
