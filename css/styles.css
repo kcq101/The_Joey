@@ -1416,3 +1416,16 @@
 .mso-title{font:700 15px Inter,sans-serif;color:#12261E;}
 .mso-sub{font:500 12px Inter,sans-serif;color:#6B7570;}
 .mso-chev{font-size:22px;color:#B5AE9C;line-height:1;margin-left:4px;}
+
+/* side contest strokes note: small blue exponent beside the total */
+.score-box{position:relative;}
+.bonus-sup{position:absolute;top:-1px;right:-15px;font:800 11px Inter,sans-serif;line-height:1;color:#2F6FD6;letter-spacing:0;}
+.your-team-score .bonus-sup{position:relative;top:-1.1em;right:auto;margin-left:2px;font-size:12px;background:none;color:#8FB8FF;box-shadow:none;padding:0;vertical-align:baseline;}
+.mono .bonus-sup{position:relative;top:-.6em;right:auto;margin-left:1px;background:none;color:#2F6FD6;box-shadow:none;padding:0;}
+
+/* leaderboard +/-: plain, smaller, no circle (more room for the score) */
+.lb-expand-toggle{width:14px;height:auto;background:none;border:none;box-shadow:none;border-radius:0;
+  font-size:17px;font-weight:700;color:#7A847E;opacity:1;padding:0;margin-left:4px;
+  text-shadow:0 1px 0 #fff, 0 2px 2px rgba(0,0,0,.18);}
+.lb-row:active .lb-expand-toggle, .lb-expand-toggle:active{box-shadow:none;transform:translateY(1px);}
+.bh-expand{width:18px;}
