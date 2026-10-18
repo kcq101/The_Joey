@@ -4872,6 +4872,7 @@ function paintYearChrome(){
     }
   }
   document.body.classList.toggle('viewing-past-year', viewingPastYear());
+  paintPhotosBtn();
   const mf = document.getElementById('markFinalBtn');   // label follows the year being viewed
   if(mf && window.storage.yearMode && window.storage.yearMode()){
     mf.textContent = yearIsFinal(TOURNAMENT_YEAR) ? `🔓 Reopen ${TOURNAMENT_YEAR}` : `🏁 Mark ${TOURNAMENT_YEAR} Final`;
@@ -5065,6 +5066,7 @@ function paintYearsAdmin(){
     sel.innerHTML = st.years().map(y=>`<option value="${y}" ${y===st.currentYear()?'selected':''}>${y}</option>`).join('');
   }
   document.getElementById('resetTestBtn').style.display = st.testMode ? '' : 'none';
+  paintPhotosBtn();
   const mf = document.getElementById('markFinalBtn');
   if(mf){
     mf.style.display = yearMode ? '' : 'none';
@@ -5229,3 +5231,113 @@ function wireYearsAdmin(){
     gateShowStep('gateStepAdmin');
   };
 })();
+
+/* ---- Admin: download a year's photos as one ZIP ----
+   Feed photos come from that year's feed; Tribute Wall photos are global,
+   so only the ones posted during that calendar year are included. Auto
+   posts (trophy/bot icons) are skipped. JSZip loads only when needed. */
+function paintPhotosBtn(){
+  const b = document.getElementById('downloadPhotosBtn');
+  if(b && !b.disabled) b.textContent = `📸 Download ${TOURNAMENT_YEAR} photos`;
+}
+let jszipPromise = null;
+function loadJSZip(){
+  if(window.JSZip) return Promise.resolve(window.JSZip);
+  if(!jszipPromise) jszipPromise = new Promise((resolve, reject)=>{
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+    s.onload = ()=>window.JSZip ? resolve(window.JSZip) : reject(new Error('JSZip missing'));
+    s.onerror = ()=>{ jszipPromise = null; reject(new Error('Could not load the ZIP tool')); };
+    document.head.appendChild(s);
+  });
+  return jszipPromise;
+}
+async function postsWithMediaForYear(y, includeVideos){
+  let feed;
+  if(window.storage.yearMode && window.storage.yearMode()){
+    const docs = await window.storage.listRaw(`${y}|feed-post:`);
+    feed = docs.map(({data})=>postFromDoc(data, null)).filter(Boolean);
+  } else {
+    feed = feedPosts.slice();
+  }
+  const tribute = tributePosts.filter(p=>p && p.time && new Date(p.time).getFullYear() === y);
+  const pick = (list, folder)=>list
+    .filter(p=>!p.system && (p.img || (includeVideos && p.video)))
+    .sort((a,b)=>(a.time||0)-(b.time||0))
+    .map(p=>({post:p, folder, url: p.video && includeVideos ? p.video : p.img, isVideo: !!(p.video && includeVideos)}))
+    .filter(x=>x.url);
+  return [...pick(feed, 'Feed'), ...pick(tribute, 'Tribute Wall')];
+}
+function photoFileName(item, n, used){
+  const p = item.post;
+  const d = p.time ? new Date(p.time) : null;
+  const pad = v=>String(v).padStart(2,'0');
+  const date = d ? `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}` : 'undated';
+  const who = String(p.name || 'Unknown').replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'Unknown';
+  const m = /\.([a-z0-9]{2,4})(?:$|\?)/i.exec(item.url.split('?')[0]);
+  const ext = (m ? m[1] : (item.isVideo ? 'mp4' : 'jpg')).toLowerCase();
+  let name = `${date}_${who}.${ext}`, i = 2;
+  while(used.has(item.folder + '/' + name)) name = `${date}_${who}_${i++}.${ext}`;
+  used.add(item.folder + '/' + name);
+  return name;
+}
+async function downloadYearPhotos(){
+  const btn = document.getElementById('downloadPhotosBtn');
+  const prog = document.getElementById('photosProgress');
+  const includeVideos = !!(document.getElementById('photosIncludeVideos') || {}).checked;
+  const y = TOURNAMENT_YEAR;
+  const say = (msg)=>{ prog.style.display = ''; prog.textContent = msg; };
+  btn.disabled = true;
+  try{
+    say(`Finding ${y} photos…`);
+    const [JSZip, items] = await Promise.all([loadJSZip(), postsWithMediaForYear(y, includeVideos)]);
+    if(!items.length){ say(`No photos were posted in ${y}.`); return; }
+    const zip = new JSZip();
+    const root = zip.folder(`The Joey ${y} Photos`);
+    const used = new Set(), failed = [], index = [];
+    let done = 0, i = 0;
+    const worker = async ()=>{
+      while(i < items.length){
+        const item = items[i++];
+        const name = photoFileName(item, i, used);
+        try{
+          const res = await fetchWithTimeout(item.url, {}, item.isVideo ? 180000 : 45000);
+          if(!res.ok) throw new Error(res.status);
+          root.folder(item.folder).file(name, await res.blob(), {binary:true});
+          const when = item.post.time ? new Date(item.post.time).toLocaleString() : '';
+          const caption = (item.post.text || '').replace(/\s+/g, ' ').trim();
+          index.push(`${item.folder}/${name}\n  Posted by ${item.post.name || 'Unknown'}${when ? ' · ' + when : ''}${caption ? '\n  "' + caption + '"' : ''}`);
+        }catch(e){
+          console.error('photo download failed', item.url, e);
+          failed.push(`${item.folder}: ${item.post.name || 'Unknown'}${item.post.time ? ', ' + new Date(item.post.time).toLocaleDateString() : ''}`);
+        }
+        done++;
+        btn.textContent = `Downloading ${done} of ${items.length}…`;
+      }
+    };
+    btn.textContent = `Downloading 0 of ${items.length}…`;
+    await Promise.all([worker(), worker(), worker(), worker()]);
+    const saved = items.length - failed.length;
+    if(!saved){ say(`Couldn't download any photos. Check your connection and try again.`); return; }
+    index.sort();
+    root.file('Photo list.txt', `The Joey ${y} — Photos\nFeed and Tribute Wall photos posted in ${y}.\n\n` + index.join('\n\n') + '\n');
+    btn.textContent = 'Building ZIP…';
+    const blob = await zip.generateAsync({type:'blob', compression:'STORE'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `The Joey ${y} Photos.zip`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 60000);
+    const mb = (blob.size / 1048576).toFixed(1);
+    say(`Saved ${saved} file${saved===1?'':'s'} (${mb} MB).` + (failed.length ? ` Couldn't download ${failed.length}: ${failed.join('; ')}.` : ''));
+  }catch(e){
+    console.error('photo zip failed', e);
+    say(`Download failed: ${e.message || e}. Try again.`);
+  }finally{
+    btn.disabled = false;
+    paintPhotosBtn();
+  }
+}
+document.addEventListener('click', (e)=>{
+  if(e.target.closest('#downloadPhotosBtn')) downloadYearPhotos();
+});
